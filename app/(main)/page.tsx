@@ -19,7 +19,7 @@ export default async function HomePage() {
           <h2 className="text-2xl font-bold leading-tight md:text-3xl">가족 가계도</h2>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
             persons와 relationships 테이블을 기준으로 가족 계층도와 목록을 표시합니다.
-            지파, 세대, 고인 여부를 함께 확인할 수 있습니다.
+            지파와 고인 여부를 함께 확인할 수 있습니다.
           </p>
         </div>
       </section>

@@ -23,30 +23,43 @@ export type EntityId = string;
 
 export interface Person {
   id: EntityId;
-  internal_code: string;
-  name: string;
+  full_name: string;
+  hanja_name: string | null;
   gender: "male" | "female" | "unknown" | null;
   birth_date: ISODateString | null;
-  lunar_birth_date: ISODateString | null;
+  generation_depth: number | null;
+  internal_code: string;
   phone: string | null;
+  email: string | null;
   address: string | null;
-  generation: number | null;
-  branch_code: BranchCode;
-  family_role_type: FamilyRoleType;
-  deceased: boolean;
-  death_date: ISODateString | null;
-  burial_place: string | null;
+  region: string | null;
+  profile_image_url: string | null;
+  is_alive: boolean;
+  deceased_date: ISODateString | null;
+  deceased_note: string | null;
+  is_visible: boolean;
   memo: string | null;
   created_at: ISODateTimeString;
   updated_at: ISODateTimeString;
+  created_by: EntityId | null;
+  updated_by: EntityId | null;
+  branch_code: BranchCode;
+  family_role_type: FamilyRoleType;
+  birth_order: number | null;
+  birth_date_solar: ISODateString | null;
+  birth_date_lunar: ISODateString | null;
+  birth_calendar_type: "solar" | "lunar" | string | null;
+  is_lunar_leap_month: boolean | null;
 }
 
 export interface Relationship {
   id: EntityId;
-  from_person_id: EntityId;
-  to_person_id: EntityId;
-  relationship_type: RelationshipType;
+  person_id: EntityId;
+  related_person_id: EntityId;
+  relation_type: RelationshipType;
+  is_primary: boolean;
   created_at: ISODateTimeString;
+  created_by: EntityId | null;
 }
 
 export interface UserProfile {

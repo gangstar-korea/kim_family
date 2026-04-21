@@ -10,15 +10,28 @@ export type FamilyTree = {
   roots: FamilyTreeNode[];
 };
 
-function byGenerationThenCode(a: Person, b: Person) {
-  const generationA = a.generation ?? 999;
-  const generationB = b.generation ?? 999;
+function byBranchThenCode(a: Person, b: Person) {
+  const depthA = a.generation_depth ?? 999;
+  const depthB = b.generation_depth ?? 999;
 
-  if (generationA !== generationB) {
-    return generationA - generationB;
+  if (depthA !== depthB) {
+    return depthA - depthB;
   }
 
-  return a.internal_code.localeCompare(b.internal_code);
+  const orderA = a.birth_order ?? 999;
+  const orderB = b.birth_order ?? 999;
+
+  if (orderA !== orderB) {
+    return orderA - orderB;
+  }
+
+  const dateCompare = (a.birth_date ?? "").localeCompare(b.birth_date ?? "");
+
+  if (dateCompare !== 0) {
+    return dateCompare;
+  }
+
+  return a.full_name.localeCompare(b.full_name);
 }
 
 export function buildFamilyTree(persons: Person[], relationships: Relationship[]): FamilyTree {
@@ -28,20 +41,20 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
   const childIds = new Set<string>();
 
   relationships.forEach((relationship) => {
-    if (relationship.relationship_type === "spouse") {
-      spouseByPersonId.set(relationship.from_person_id, relationship.to_person_id);
-      spouseByPersonId.set(relationship.to_person_id, relationship.from_person_id);
+    if (relationship.relation_type === "spouse") {
+      spouseByPersonId.set(relationship.person_id, relationship.related_person_id);
+      spouseByPersonId.set(relationship.related_person_id, relationship.person_id);
       return;
     }
 
     const parentId =
-      relationship.relationship_type === "parent"
-        ? relationship.from_person_id
-        : relationship.to_person_id;
+      relationship.relation_type === "parent"
+        ? relationship.person_id
+        : relationship.related_person_id;
     const childId =
-      relationship.relationship_type === "parent"
-        ? relationship.to_person_id
-        : relationship.from_person_id;
+      relationship.relation_type === "parent"
+        ? relationship.related_person_id
+        : relationship.person_id;
 
     childIds.add(childId);
     const siblings = childrenByParentId.get(parentId) ?? [];
@@ -70,7 +83,7 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
     const children = [...childIdSet]
       .map((childId) => personById.get(childId))
       .filter((child): child is Person => Boolean(child))
-      .sort(byGenerationThenCode)
+      .sort(byBranchThenCode)
       .map(createNode);
 
     return {
@@ -82,12 +95,12 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
 
   const roots = persons
     .filter((person) => !childIds.has(person.id) && person.family_role_type !== "spouse")
-    .sort(byGenerationThenCode)
+    .sort(byBranchThenCode)
     .map(createNode);
 
   const orphanRoots = persons
     .filter((person) => !visited.has(person.id) && person.family_role_type !== "spouse")
-    .sort(byGenerationThenCode)
+    .sort(byBranchThenCode)
     .map(createNode);
 
   return {

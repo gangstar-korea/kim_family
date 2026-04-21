@@ -10,14 +10,27 @@ type FamilyListTabProps = {
 
 export function FamilyListTab({ persons }: FamilyListTabProps) {
   const sortedPersons = [...persons].sort((a, b) => {
-    const generationA = a.generation ?? 999;
-    const generationB = b.generation ?? 999;
+    const depthA = a.generation_depth ?? 999;
+    const depthB = b.generation_depth ?? 999;
 
-    if (generationA !== generationB) {
-      return generationA - generationB;
+    if (depthA !== depthB) {
+      return depthA - depthB;
     }
 
-    return a.internal_code.localeCompare(b.internal_code);
+    const orderA = a.birth_order ?? 999;
+    const orderB = b.birth_order ?? 999;
+
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    const birthDateCompare = (a.birth_date ?? "").localeCompare(b.birth_date ?? "");
+
+    if (birthDateCompare !== 0) {
+      return birthDateCompare;
+    }
+
+    return a.full_name.localeCompare(b.full_name);
   });
 
   if (sortedPersons.length === 0) {
@@ -43,18 +56,18 @@ function PersonListItem({ person }: { person: Person }) {
       href={`/family/${person.id}`}
       className={cn(
         "block rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        person.deceased && "bg-muted/60",
+        !person.is_alive && "bg-muted/60",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-bold">{person.name}</p>
+          <p className="truncate text-base font-bold">{person.full_name}</p>
           <p className="mt-1 text-xs font-semibold text-muted-foreground">
-            {person.generation ?? "-"}세대 · {person.branch_code} ·{" "}
+            {person.generation_depth ?? "-"}세대 · {person.branch_code} ·{" "}
             {person.family_role_type === "blood" ? "혈족" : "배우자"}
           </p>
         </div>
-        {person.deceased ? (
+        {!person.is_alive ? (
           <span className="shrink-0 rounded-full border border-border bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
             고인
           </span>

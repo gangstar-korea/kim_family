@@ -42,8 +42,10 @@ export async function getPersonsByBranch(
   let query = supabase
     .from("persons")
     .select("*")
-    .order("generation", { ascending: true })
-    .order("internal_code", { ascending: true });
+    .order("generation_depth", { ascending: true, nullsFirst: false })
+    .order("birth_order", { ascending: true, nullsFirst: false })
+    .order("birth_date", { ascending: true, nullsFirst: false })
+    .order("full_name", { ascending: true });
 
   if (branchCode && branchCode !== "ROOT") {
     query = query.eq("branch_code", branchCode);

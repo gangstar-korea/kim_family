@@ -76,7 +76,7 @@ function CoupleCard({ node, depth }: { node: FamilyTreeNode; depth: number }) {
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-          {node.person.generation ?? depth + 1}세대
+          {node.person.generation_depth ?? depth + 1}세대
         </span>
         <span className="text-xs font-semibold text-primary">{node.person.branch_code}</span>
       </div>
@@ -112,12 +112,12 @@ function PersonCard({ person, primary = false }: { person: Person; primary?: boo
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-bold">{person.name}</p>
+          <p className="truncate text-base font-bold">{person.full_name}</p>
           <p className="mt-1 break-all text-xs font-medium text-muted-foreground">
             {person.family_role_type === "blood" ? "혈족" : "배우자"} · {person.internal_code}
           </p>
         </div>
-        {person.deceased ? (
+        {!person.is_alive ? (
           <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
             고인
           </span>
@@ -132,11 +132,11 @@ function PersonCard({ person, primary = false }: { person: Person; primary?: boo
             <dd>{person.birth_date}</dd>
           </div>
         ) : null}
-        {person.deceased && person.death_date ? (
+        {!person.is_alive && person.deceased_date ? (
           <div className="flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden />
             <dt className="sr-only">별세일</dt>
-            <dd>별세 {person.death_date}</dd>
+            <dd>별세 {person.deceased_date}</dd>
           </div>
         ) : null}
         {person.address ? (
