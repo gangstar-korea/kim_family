@@ -38,7 +38,7 @@ export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
 export async function getPersonsByBranch(
   supabase: SupabaseServerClient,
   branchCode?: BranchCode,
-) {
+): Promise<Person[]> {
   let query = supabase
     .from("persons")
     .select("*")
@@ -58,7 +58,7 @@ export async function getPersonsByBranch(
   return data;
 }
 
-export async function getRelationships(supabase: SupabaseServerClient) {
+export async function getRelationships(supabase: SupabaseServerClient): Promise<Relationship[]> {
   const { data, error } = await supabase
     .from("relationships")
     .select("*")
