@@ -1,5 +1,16 @@
 import { cookies } from "next/headers";
+import { type NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+
+type ResponseCookieOptions = NonNullable<
+  Parameters<NextResponse["cookies"]["set"]>[2]
+>;
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: ResponseCookieOptions;
+};
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -15,7 +26,7 @@ export async function createClient() {
       getAll() {
         return cookieStore.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: CookieToSet[]) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
