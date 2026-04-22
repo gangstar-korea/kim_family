@@ -36,8 +36,8 @@ export default async function HomePage() {
         <div className="space-y-2">
           <h2 className="text-2xl font-bold leading-tight md:text-3xl">가족 가계도</h2>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            persons와 relationships 테이블을 기준으로 가족 계층도와 목록을 표시합니다.
-            지파와 고인 여부를 함께 확인할 수 있습니다.
+            가족 계층도 탭은 관계 중심 화면으로 준비 중이며, 가족 목록 탭에서
+            세대별 카드 디렉토리를 확인할 수 있습니다.
           </p>
         </div>
       </section>
@@ -114,7 +114,7 @@ export default async function HomePage() {
           <FamilyTreeTab data={familyGraphData} />
         </TabsContent>
         <TabsContent value="list">
-          <FamilyListTab persons={familyGraphData.persons} />
+          <FamilyListTab data={familyGraphData} />
         </TabsContent>
       </Tabs>
     </PageContainer>

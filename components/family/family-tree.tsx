@@ -13,11 +13,11 @@ type FamilyTreeProps = {
   tree: FamilyTree;
 };
 
-export function FamilyTreeView({ tree }: FamilyTreeProps) {
+export function FamilyGenerationListView({ tree }: FamilyTreeProps) {
   if (tree.generations.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-        표시할 가족 데이터가 없습니다.
+        표시할 가족 목록이 없습니다.
       </div>
     );
   }
@@ -45,7 +45,7 @@ function GenerationSection({ generation }: { generation: FamilyGenerationGroup }
           </p>
         </div>
         <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-          generation_depth: {generation.generationDepth ?? "-"}
+          세대별 가족 목록
         </span>
       </div>
 
