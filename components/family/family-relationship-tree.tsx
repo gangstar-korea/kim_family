@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, ChevronRight, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import type {
@@ -14,8 +14,12 @@ import { cn } from "@/lib/utils";
 
 const TEXT = {
   noTree: "\uD45C\uC2DC\uD560 \uAC00\uC871 \uACC4\uCE35\uB3C4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+  rootColumn: "\uCD5C\uC0C1\uC704",
+  childColumn: "\uC790\uB140",
+  selectedFamily: "\uC120\uD0DD\uD55C \uAC00\uAD6C",
   deceased: "\uACE0\uC778",
   spouseSeparator: "\uBC30\uC6B0\uC790",
+  noChildren: "\uD45C\uC2DC\uD560 \uC790\uB140\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
   detailTitle: "\uAC00\uC871 \uC0C1\uC138",
   close: "\uB2EB\uAE30",
   name: "\uC774\uB984",
@@ -41,7 +45,10 @@ type FamilyRelationshipTreeProps = {
 };
 
 export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
+  const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const nodeById = useMemo(() => buildNodeMap(tree.roots), [tree.roots]);
+  const columns = buildExplorerColumns(tree.roots, selectedPath, nodeById);
 
   if (tree.roots.length === 0) {
     return (
@@ -51,14 +58,27 @@ export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
     );
   }
 
+  function handleSelectNode(node: FamilyHierarchyNode, columnIndex: number) {
+    setSelectedPath((currentPath) => {
+      const nextPath = currentPath.slice(0, columnIndex);
+      nextPath[columnIndex] = node.unit.id;
+      return nextPath;
+    });
+  }
+
   return (
     <>
       <div className="overflow-x-auto pb-3">
-        <div className="flex min-w-max justify-center gap-8 px-2">
-          {tree.roots.map((root) => (
-            <HierarchyNodeView
-              key={root.unit.id}
-              node={root}
+        <div className="flex min-w-max gap-3 px-1">
+          {columns.map((column, columnIndex) => (
+            <ExplorerColumn
+              key={`${column.title}-${columnIndex}`}
+              title={column.title}
+              parentNode={column.parentNode}
+              nodes={column.nodes}
+              selectedNodeId={selectedPath[columnIndex] ?? null}
+              columnIndex={columnIndex}
+              onSelectNode={handleSelectNode}
               onSelectPerson={setSelectedPerson}
             />
           ))}
@@ -73,12 +93,153 @@ export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
   );
 }
 
-function HierarchyNodeView({
+function buildNodeMap(nodes: FamilyHierarchyNode[]) {
+  const nodeById = new Map<string, FamilyHierarchyNode>();
+
+  function visit(node: FamilyHierarchyNode) {
+    nodeById.set(node.unit.id, node);
+    node.children.forEach(visit);
+  }
+
+  nodes.forEach(visit);
+  return nodeById;
+}
+
+function buildExplorerColumns(
+  roots: FamilyHierarchyNode[],
+  selectedPath: string[],
+  nodeById: Map<string, FamilyHierarchyNode>,
+) {
+  const columns: Array<{
+    title: string;
+    parentNode: FamilyHierarchyNode | null;
+    nodes: FamilyHierarchyNode[];
+  }> = [
+    {
+      title: TEXT.rootColumn,
+      parentNode: null,
+      nodes: roots,
+    },
+  ];
+
+  selectedPath.forEach((nodeId, index) => {
+    const node = nodeById.get(nodeId);
+
+    if (!node) {
+      return;
+    }
+
+    columns.push({
+      title: index === 0 ? TEXT.childColumn : node.unit.primary.full_name,
+      parentNode: node,
+      nodes: node.children,
+    });
+  });
+
+  return columns;
+}
+
+function ExplorerColumn({
+  title,
+  parentNode,
+  nodes,
+  selectedNodeId,
+  columnIndex,
+  onSelectNode,
+  onSelectPerson,
+}: {
+  title: string;
+  parentNode: FamilyHierarchyNode | null;
+  nodes: FamilyHierarchyNode[];
+  selectedNodeId: string | null;
+  columnIndex: number;
+  onSelectNode: (node: FamilyHierarchyNode, columnIndex: number) => void;
+  onSelectPerson: (person: Person) => void;
+}) {
+  return (
+    <section className="w-[16.5rem] shrink-0 rounded-lg border border-border bg-background p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="truncate text-sm font-bold">{title}</h3>
+        <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+          {nodes.length}
+        </span>
+      </div>
+
+      {parentNode ? (
+        <div className="mb-3 rounded-md border border-primary/20 bg-primary/5 p-2">
+          <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+            {TEXT.selectedFamily}
+          </p>
+          <CoupleUnitCard node={parentNode} onSelectPerson={onSelectPerson} compact />
+        </div>
+      ) : null}
+
+      {nodes.length > 0 ? (
+        <div className="space-y-2">
+          {nodes.map((node) => (
+            <ExplorerNodeButton
+              key={node.unit.id}
+              node={node}
+              selected={selectedNodeId === node.unit.id}
+              onClick={() => onSelectNode(node, columnIndex)}
+              onSelectPerson={onSelectPerson}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-md bg-muted/50 px-3 py-4 text-center text-xs leading-5 text-muted-foreground">
+          {TEXT.noChildren}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ExplorerNodeButton({
   node,
+  selected,
+  onClick,
   onSelectPerson,
 }: {
   node: FamilyHierarchyNode;
+  selected: boolean;
+  onClick: () => void;
   onSelectPerson: (person: Person) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md border p-2 transition-colors",
+        selected ? "border-primary/50 bg-primary/5" : "border-border bg-card",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <CoupleUnitCard node={node} onSelectPerson={onSelectPerson} />
+        </div>
+        {node.children.length > 0 ? (
+          <button
+            type="button"
+            onClick={onClick}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+            <span className="sr-only">{node.unit.primary.full_name}</span>
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function CoupleUnitCard({
+  node,
+  onSelectPerson,
+  compact = false,
+}: {
+  node: FamilyHierarchyNode;
+  onSelectPerson: (person: Person) => void;
+  compact?: boolean;
 }) {
   const members: FamilyUnitMember[] = [
     { person: node.unit.primary, role: "primary" },
@@ -87,69 +248,37 @@ function HierarchyNodeView({
       role: "spouse" as const,
     })),
   ];
-  const hasChildren = node.children.length > 0;
 
   return (
-    <div className="flex flex-col items-center">
-      <CoupleUnitCard members={members} onSelectPerson={onSelectPerson} />
-
-      {hasChildren ? (
-        <>
-          <div className="h-5 w-px bg-border" aria-hidden />
-          <div className="relative flex justify-center gap-5 pt-5">
-            <div className="absolute left-1/2 right-1/2 top-0 h-px bg-border" aria-hidden />
-            {node.children.length > 1 ? (
-              <div
-                className="absolute left-10 right-10 top-0 h-px bg-border"
-                aria-hidden
-              />
-            ) : null}
-            {node.children.map((child) => (
-              <div key={child.unit.id} className="relative flex flex-col items-center">
-                <div className="absolute -top-5 h-5 w-px bg-border" aria-hidden />
-                <HierarchyNodeView node={child} onSelectPerson={onSelectPerson} />
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function CoupleUnitCard({
-  members,
-  onSelectPerson,
-}: {
-  members: FamilyUnitMember[];
-  onSelectPerson: (person: Person) => void;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-background p-2 shadow-sm">
-      <div className="flex items-stretch gap-1.5">
-        {members.map((member, index) => (
-          <div key={member.person.id} className="flex items-center gap-1.5">
-            {index > 0 ? (
-              <span
-                className="text-[10px] font-semibold text-muted-foreground"
-                aria-label={TEXT.spouseSeparator}
-              >
-                +
-              </span>
-            ) : null}
-            <TreePersonButton member={member} onSelect={onSelectPerson} />
-          </div>
-        ))}
-      </div>
+    <div className={cn("flex flex-wrap items-center gap-1.5", compact && "gap-1")}>
+      {members.map((member, index) => (
+        <div key={member.person.id} className="flex min-w-0 items-center gap-1.5">
+          {index > 0 ? (
+            <span
+              className="text-[10px] font-semibold text-muted-foreground"
+              aria-label={TEXT.spouseSeparator}
+            >
+              +
+            </span>
+          ) : null}
+          <TreePersonButton
+            member={member}
+            compact={compact}
+            onSelect={onSelectPerson}
+          />
+        </div>
+      ))}
     </div>
   );
 }
 
 function TreePersonButton({
   member,
+  compact,
   onSelect,
 }: {
   member: FamilyUnitMember;
+  compact?: boolean;
   onSelect: (person: Person) => void;
 }) {
   const { person, role } = member;
@@ -157,10 +286,14 @@ function TreePersonButton({
   return (
     <button
       type="button"
-      onClick={() => onSelect(person)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(person);
+      }}
       className={cn(
-        "flex min-h-14 w-24 flex-col items-center justify-center rounded-md border px-2 py-2 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        role === "primary" ? "border-primary/30 bg-primary/5" : "border-border bg-card",
+        "flex min-h-12 flex-col items-center justify-center rounded-md border px-2 py-1.5 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        compact ? "w-20" : "w-24",
+        role === "primary" ? "border-primary/30 bg-primary/5" : "border-border bg-background",
         !person.is_alive && "bg-muted/70 text-muted-foreground",
       )}
     >
