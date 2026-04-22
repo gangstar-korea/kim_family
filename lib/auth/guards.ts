@@ -4,6 +4,30 @@ import type { AppRole, UserProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/queries";
 
+export async function getAuthenticatedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+}
+
+export async function requireAuthenticatedUser() {
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  return user;
+}
+
 export async function requireUserProfile() {
   const supabase = await createClient();
   const profile = await getCurrentUserProfile(supabase);

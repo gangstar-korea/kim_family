@@ -3,10 +3,12 @@ import { FamilyTreeTab } from "@/components/family/family-tree-tab";
 import { PageContainer } from "@/components/layout/page-container";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildFamilyTree, countFamilyTreeNodes } from "@/lib/family/tree-adapter";
+import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { getFamilyGraphData } from "@/lib/supabase/queries";
 
 export default async function HomePage() {
+  const user = await requireAuthenticatedUser();
   const supabase = await createClient();
   const familyGraphData = await getFamilyGraphData(supabase);
   const familyTree = buildFamilyTree(familyGraphData.persons, familyGraphData.relationships);
@@ -21,7 +23,7 @@ export default async function HomePage() {
       .length,
     treeNodesCount,
     listItemsCount,
-    authenticatedUserId: debug?.authenticatedUserId ?? null,
+    authenticatedUserId: debug?.authenticatedUserId ?? user.id,
     supabaseErrorMessage: debug?.supabaseErrorMessage ?? null,
   });
 

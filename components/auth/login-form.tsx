@@ -62,6 +62,10 @@ export function LoginForm() {
         로그인
       </Button>
 
+      <p className="text-center text-xs leading-5 text-muted-foreground">
+        로그인에 성공하면 실제 가족 공간으로 이동합니다.
+      </p>
+
       <p className="text-center text-sm text-muted-foreground">
         처음 방문하셨나요?{" "}
         <Link href="/signup" className="font-semibold text-primary underline-offset-4 hover:underline">
