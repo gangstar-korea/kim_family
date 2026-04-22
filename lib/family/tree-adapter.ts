@@ -1,56 +1,93 @@
 import type { Person, Relationship } from "@/lib/types";
 
-export type FamilyGenerationPerson = {
+export type FamilyUnitMember = {
   person: Person;
-  spouseNames: string[];
+  role: "primary" | "spouse";
+};
+
+export type FamilyUnit = {
+  id: string;
+  primary: Person;
+  spouses: Person[];
   parentNames: string[];
   childCount: number;
+  lineageSortKey: string;
 };
 
 export type FamilyGenerationGroup = {
   generationDepth: number | null;
   label: string;
-  persons: FamilyGenerationPerson[];
+  units: FamilyUnit[];
 };
 
 export type FamilyTree = {
   generations: FamilyGenerationGroup[];
 };
 
+const UNKNOWN_DEPTH = 999;
+const UNKNOWN_ORDER = 999;
+const UNKNOWN_DATE = "9999-99-99";
+const GENERATION_LABEL = "\uC138\uB300";
+const UNKNOWN_GENERATION_LABEL = "\uC138\uB300 \uBBF8\uC9C0\uC815";
+
+function baseSortValue(person: Person) {
+  const order = String(person.birth_order ?? UNKNOWN_ORDER).padStart(4, "0");
+  const birthDate = person.birth_date ?? UNKNOWN_DATE;
+
+  return `${order}:${birthDate}:${person.full_name}`;
+}
+
 function sortPeople(a: Person, b: Person) {
-  const depthA = a.generation_depth ?? 999;
-  const depthB = b.generation_depth ?? 999;
+  const depthA = a.generation_depth ?? UNKNOWN_DEPTH;
+  const depthB = b.generation_depth ?? UNKNOWN_DEPTH;
 
   if (depthA !== depthB) {
     return depthA - depthB;
   }
 
-  const orderA = a.birth_order ?? 999;
-  const orderB = b.birth_order ?? 999;
+  return baseSortValue(a).localeCompare(baseSortValue(b), "ko");
+}
 
-  if (orderA !== orderB) {
-    return orderA - orderB;
-  }
+function uniquePeople(people: Person[]) {
+  const seen = new Set<string>();
 
-  const birthDateCompare = (a.birth_date ?? "").localeCompare(b.birth_date ?? "");
+  return people.filter((person) => {
+    if (seen.has(person.id)) {
+      return false;
+    }
 
-  if (birthDateCompare !== 0) {
-    return birthDateCompare;
-  }
-
-  return a.full_name.localeCompare(b.full_name);
+    seen.add(person.id);
+    return true;
+  });
 }
 
 function uniqueNames(names: string[]) {
   return [...new Set(names)].filter(Boolean);
 }
 
+function relationToParentChild(relationship: Relationship) {
+  if (relationship.relation_type === "parent") {
+    return {
+      parentId: relationship.person_id,
+      childId: relationship.related_person_id,
+    };
+  }
+
+  if (relationship.relation_type === "child") {
+    return {
+      parentId: relationship.related_person_id,
+      childId: relationship.person_id,
+    };
+  }
+
+  return null;
+}
+
 export function buildFamilyTree(persons: Person[], relationships: Relationship[]): FamilyTree {
   const personById = new Map(persons.map((person) => [person.id, person]));
-  const dedupedPersons = [...personById.values()].sort(sortPeople);
-  const spouseNamesByPersonId = new Map<string, string[]>();
-  const parentNamesByPersonId = new Map<string, string[]>();
-  const childCountByPersonId = new Map<string, number>();
+  const spouseIdsByPersonId = new Map<string, string[]>();
+  const parentIdsByChildId = new Map<string, string[]>();
+  const childIdsByParentId = new Map<string, string[]>();
 
   relationships.forEach((relationship) => {
     const person = personById.get(relationship.person_id);
@@ -61,52 +98,127 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
     }
 
     if (relationship.relation_type === "spouse") {
-      spouseNamesByPersonId.set(relationship.person_id, [
-        ...(spouseNamesByPersonId.get(relationship.person_id) ?? []),
-        relatedPerson.full_name,
+      spouseIdsByPersonId.set(relationship.person_id, [
+        ...(spouseIdsByPersonId.get(relationship.person_id) ?? []),
+        relationship.related_person_id,
       ]);
-      spouseNamesByPersonId.set(relationship.related_person_id, [
-        ...(spouseNamesByPersonId.get(relationship.related_person_id) ?? []),
-        person.full_name,
+      spouseIdsByPersonId.set(relationship.related_person_id, [
+        ...(spouseIdsByPersonId.get(relationship.related_person_id) ?? []),
+        relationship.person_id,
       ]);
       return;
     }
 
-    const parent =
-      relationship.relation_type === "parent" ? person : relatedPerson;
-    const child =
-      relationship.relation_type === "parent" ? relatedPerson : person;
+    const parentChild = relationToParentChild(relationship);
 
-    parentNamesByPersonId.set(child.id, [
-      ...(parentNamesByPersonId.get(child.id) ?? []),
-      parent.full_name,
+    if (!parentChild) {
+      return;
+    }
+
+    parentIdsByChildId.set(parentChild.childId, [
+      ...(parentIdsByChildId.get(parentChild.childId) ?? []),
+      parentChild.parentId,
     ]);
-    childCountByPersonId.set(parent.id, (childCountByPersonId.get(parent.id) ?? 0) + 1);
+    childIdsByParentId.set(parentChild.parentId, [
+      ...(childIdsByParentId.get(parentChild.parentId) ?? []),
+      parentChild.childId,
+    ]);
   });
 
-  const groupsByDepth = new Map<number | null, FamilyGenerationPerson[]>();
+  const bloodPeople = [...personById.values()]
+    .filter((person) => person.family_role_type === "blood")
+    .sort(sortPeople);
+  const unitMemberIds = new Set<string>();
+  const lineageKeyByPersonId = new Map<string, string>();
 
-  dedupedPersons.forEach((person) => {
-    const depth = person.generation_depth;
-    const groupPersons = groupsByDepth.get(depth) ?? [];
+  function computeLineageKey(person: Person, visiting = new Set<string>()): string {
+    const cached = lineageKeyByPersonId.get(person.id);
 
-    groupsByDepth.set(depth, [
-      ...groupPersons,
-      {
-        person,
-        spouseNames: uniqueNames(spouseNamesByPersonId.get(person.id) ?? []),
-        parentNames: uniqueNames(parentNamesByPersonId.get(person.id) ?? []),
-        childCount: childCountByPersonId.get(person.id) ?? 0,
-      },
-    ]);
+    if (cached) {
+      return cached;
+    }
+
+    const ownKey = `${String(person.generation_depth ?? UNKNOWN_DEPTH).padStart(3, "0")}:${baseSortValue(person)}`;
+
+    if (visiting.has(person.id)) {
+      return ownKey;
+    }
+
+    visiting.add(person.id);
+
+    const parentKeys = (parentIdsByChildId.get(person.id) ?? [])
+      .map((parentId) => personById.get(parentId))
+      .filter((parent): parent is Person => Boolean(parent))
+      .filter((parent) => parent.family_role_type === "blood")
+      .sort(sortPeople)
+      .map((parent) => computeLineageKey(parent, new Set(visiting)))
+      .sort((a, b) => a.localeCompare(b, "ko"));
+    const lineageKey = parentKeys.length > 0 ? `${parentKeys[0]}/${ownKey}` : ownKey;
+
+    lineageKeyByPersonId.set(person.id, lineageKey);
+    return lineageKey;
+  }
+
+  const bloodUnits: FamilyUnit[] = bloodPeople.map((primary) => {
+    const spouses = uniquePeople(
+      (spouseIdsByPersonId.get(primary.id) ?? [])
+        .map((spouseId) => personById.get(spouseId))
+        .filter((spouse): spouse is Person => Boolean(spouse))
+        .filter((spouse) => spouse.family_role_type === "spouse")
+        .sort(sortPeople),
+    );
+    const parentNames = uniqueNames(
+      (parentIdsByChildId.get(primary.id) ?? [])
+        .map((parentId) => personById.get(parentId)?.full_name ?? "")
+        .filter(Boolean),
+    );
+    const childCount = (childIdsByParentId.get(primary.id) ?? []).length;
+
+    unitMemberIds.add(primary.id);
+    spouses.forEach((spouse) => unitMemberIds.add(spouse.id));
+
+    return {
+      id: primary.id,
+      primary,
+      spouses,
+      parentNames,
+      childCount,
+      lineageSortKey: computeLineageKey(primary),
+    };
+  });
+
+  const standaloneSpouseUnits: FamilyUnit[] = [...personById.values()]
+    .filter((person) => person.family_role_type === "spouse")
+    .filter((person) => !unitMemberIds.has(person.id))
+    .sort(sortPeople)
+    .map((primary) => ({
+      id: primary.id,
+      primary,
+      spouses: [],
+      parentNames: [],
+      childCount: 0,
+      lineageSortKey: `${String(primary.generation_depth ?? UNKNOWN_DEPTH).padStart(3, "0")}:${baseSortValue(primary)}`,
+    }));
+  const groupsByDepth = new Map<number | null, FamilyUnit[]>();
+
+  [...bloodUnits, ...standaloneSpouseUnits].forEach((unit) => {
+    const depth = unit.primary.generation_depth;
+    const groupUnits = groupsByDepth.get(depth) ?? [];
+
+    groupsByDepth.set(depth, [...groupUnits, unit]);
   });
 
   const generations = [...groupsByDepth.entries()]
-    .sort(([depthA], [depthB]) => (depthA ?? 999) - (depthB ?? 999))
-    .map(([generationDepth, groupPersons]) => ({
+    .sort(([depthA], [depthB]) => (depthA ?? UNKNOWN_DEPTH) - (depthB ?? UNKNOWN_DEPTH))
+    .map(([generationDepth, groupUnits]) => ({
       generationDepth,
-      label: generationDepth === null ? "세대 미지정" : `${generationDepth}세대`,
-      persons: groupPersons.sort((a, b) => sortPeople(a.person, b.person)),
+      label:
+        generationDepth === null
+          ? UNKNOWN_GENERATION_LABEL
+          : `${generationDepth}${GENERATION_LABEL}`,
+      units: groupUnits.sort((a, b) =>
+        a.lineageSortKey.localeCompare(b.lineageSortKey, "ko"),
+      ),
     }));
 
   return {
@@ -116,7 +228,12 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
 
 export function countFamilyTreeNodes(tree: FamilyTree) {
   return tree.generations.reduce(
-    (total, generation) => total + generation.persons.length,
+    (total, generation) =>
+      total +
+      generation.units.reduce(
+        (unitTotal, unit) => unitTotal + 1 + unit.spouses.length,
+        0,
+      ),
     0,
   );
 }
