@@ -107,3 +107,16 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
     roots: [...roots, ...orphanRoots],
   };
 }
+
+export function countFamilyTreeNodes(tree: FamilyTree) {
+  function countNode(node: FamilyTreeNode): number {
+    const spouseCount = node.spouse ? 1 : 0;
+    return (
+      1 +
+      spouseCount +
+      node.children.reduce((total, child) => total + countNode(child), 0)
+    );
+  }
+
+  return tree.roots.reduce((total, root) => total + countNode(root), 0);
+}

@@ -115,4 +115,21 @@ export type AuthActionState = {
 export type FamilyGraphData = {
   persons: Person[];
   relationships: Relationship[];
+  debug?: FamilyGraphDebug;
+};
+
+export type FamilyGraphDebug = {
+  personsCount: number;
+  relationshipsCount: number;
+  visiblePersonsCount: number;
+  authenticatedUserId: EntityId | null;
+  supabaseErrorMessage: string | null;
+  personsErrorMessage: string | null;
+  relationshipsErrorMessage: string | null;
+  appliedFilters: {
+    branchCode: BranchCode | "ALL";
+    isVisible: "not_applied";
+    relationType: "not_applied";
+    generationDepth: "order_only";
+  };
 };
