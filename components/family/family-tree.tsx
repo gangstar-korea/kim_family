@@ -21,6 +21,7 @@ const TEXT = {
   spousePrefix: "\uBC30\uC6B0\uC790",
   parentPrefix: "\uBD80\uBAA8",
   childPrefix: "\uC790\uB140",
+  morePrefix: "\uC678",
   noRelationSummary:
     "\uB4F1\uB85D\uB41C \uAD00\uACC4 \uC694\uC57D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
   birthDate: "\uC0DD\uB144\uC6D4\uC77C",
@@ -101,9 +102,6 @@ function FamilyUnitCard({ unit }: { unit: FamilyUnit }) {
           <p className="truncate text-sm font-bold">
             {unit.primary.full_name} {TEXT.household}
           </p>
-          <p className="mt-1 break-all text-xs font-medium text-muted-foreground">
-            lineage: {unit.lineageSortKey}
-          </p>
         </div>
         <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
           {members.length}
@@ -156,12 +154,20 @@ function PersonCard({ member }: { member: FamilyUnitMember }) {
 function RelationshipSummary({ unit }: { unit: FamilyUnit }) {
   const spouseSummary =
     unit.spouses.length > 0
-      ? `${TEXT.spousePrefix} ${unit.spouses.map((spouse) => spouse.full_name).join(", ")}`
+      ? `${TEXT.spousePrefix} ${formatNameList(unit.spouses.map((spouse) => spouse.full_name))}`
+      : null;
+  const parentSummary =
+    unit.parentNames.length > 0
+      ? `${TEXT.parentPrefix} ${formatNameList(unit.parentNames)}`
+      : null;
+  const childSummary =
+    unit.childNames.length > 0
+      ? `${TEXT.childPrefix} ${formatNameList(unit.childNames)}`
       : null;
   const summaries = [
     spouseSummary,
-    unit.parentNames.length > 0 ? `${TEXT.parentPrefix} ${unit.parentNames.join(", ")}` : null,
-    unit.childCount > 0 ? `${TEXT.childPrefix} ${unit.childCount}${TEXT.personCount}` : null,
+    parentSummary,
+    childSummary,
   ].filter((summary): summary is string => Boolean(summary));
 
   if (summaries.length === 0) {
@@ -189,6 +195,18 @@ function RelationshipSummary({ unit }: { unit: FamilyUnit }) {
       ))}
     </div>
   );
+}
+
+function formatNameList(names: string[], visibleCount = 2) {
+  const uniqueNames = [...new Set(names)].filter(Boolean);
+  const visibleNames = uniqueNames.slice(0, visibleCount).join(", ");
+  const hiddenCount = uniqueNames.length - visibleCount;
+
+  if (hiddenCount <= 0) {
+    return visibleNames;
+  }
+
+  return `${visibleNames} ${TEXT.morePrefix} ${hiddenCount}${TEXT.personCount}`;
 }
 
 function PersonMeta({ person }: { person: Person }) {

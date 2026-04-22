@@ -10,7 +10,7 @@ export type FamilyUnit = {
   primary: Person;
   spouses: Person[];
   parentNames: string[];
-  childCount: number;
+  childNames: string[];
   lineageSortKey: string;
 };
 
@@ -29,12 +29,21 @@ const UNKNOWN_ORDER = 999;
 const UNKNOWN_DATE = "9999-99-99";
 const GENERATION_LABEL = "\uC138\uB300";
 const UNKNOWN_GENERATION_LABEL = "\uC138\uB300 \uBBF8\uC9C0\uC815";
+const BRANCH_ORDER = new Map<string, number>(
+  ["ROOT", "BR01", "BR02", "BR03", "BR04", "BR05", "BR06", "BR07", "BR08"].map(
+    (branchCode, index) => [branchCode, index],
+  ),
+);
 
 function baseSortValue(person: Person) {
+  const branch = String(BRANCH_ORDER.get(person.branch_code) ?? UNKNOWN_ORDER).padStart(
+    4,
+    "0",
+  );
   const order = String(person.birth_order ?? UNKNOWN_ORDER).padStart(4, "0");
   const birthDate = person.birth_date ?? UNKNOWN_DATE;
 
-  return `${order}:${birthDate}:${person.full_name}`;
+  return `${branch}:${order}:${birthDate}:${person.full_name}`;
 }
 
 function sortPeople(a: Person, b: Person) {
@@ -65,7 +74,39 @@ function uniqueNames(names: string[]) {
   return [...new Set(names)].filter(Boolean);
 }
 
-function relationToParentChild(relationship: Relationship) {
+function uniquePeopleByIds(ids: string[], personById: Map<string, Person>) {
+  return uniquePeople(
+    ids
+      .map((id) => personById.get(id))
+      .filter((person): person is Person => Boolean(person))
+      .sort(sortPeople),
+  );
+}
+
+function relationToParentChild(
+  relationship: Relationship,
+  person: Person,
+  relatedPerson: Person,
+) {
+  const personDepth = person.generation_depth;
+  const relatedPersonDepth = relatedPerson.generation_depth;
+
+  if (
+    typeof personDepth === "number" &&
+    typeof relatedPersonDepth === "number" &&
+    personDepth !== relatedPersonDepth
+  ) {
+    return personDepth < relatedPersonDepth
+      ? {
+          parentId: person.id,
+          childId: relatedPerson.id,
+        }
+      : {
+          parentId: relatedPerson.id,
+          childId: person.id,
+        };
+  }
+
   if (relationship.relation_type === "parent") {
     return {
       parentId: relationship.person_id,
@@ -109,7 +150,7 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
       return;
     }
 
-    const parentChild = relationToParentChild(relationship);
+    const parentChild = relationToParentChild(relationship, person, relatedPerson);
 
     if (!parentChild) {
       return;
@@ -168,11 +209,15 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
         .sort(sortPeople),
     );
     const parentNames = uniqueNames(
-      (parentIdsByChildId.get(primary.id) ?? [])
-        .map((parentId) => personById.get(parentId)?.full_name ?? "")
-        .filter(Boolean),
+      uniquePeopleByIds(parentIdsByChildId.get(primary.id) ?? [], personById).map(
+        (parent) => parent.full_name,
+      ),
     );
-    const childCount = (childIdsByParentId.get(primary.id) ?? []).length;
+    const childNames = uniqueNames(
+      uniquePeopleByIds(childIdsByParentId.get(primary.id) ?? [], personById).map(
+        (child) => child.full_name,
+      ),
+    );
 
     unitMemberIds.add(primary.id);
     spouses.forEach((spouse) => unitMemberIds.add(spouse.id));
@@ -182,7 +227,7 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
       primary,
       spouses,
       parentNames,
-      childCount,
+      childNames,
       lineageSortKey: computeLineageKey(primary),
     };
   });
@@ -196,7 +241,7 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
       primary,
       spouses: [],
       parentNames: [],
-      childCount: 0,
+      childNames: [],
       lineageSortKey: `${String(primary.generation_depth ?? UNKNOWN_DEPTH).padStart(3, "0")}:${baseSortValue(primary)}`,
     }));
   const groupsByDepth = new Map<number | null, FamilyUnit[]>();
