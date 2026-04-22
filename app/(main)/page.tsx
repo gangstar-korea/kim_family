@@ -111,7 +111,7 @@ export default async function HomePage() {
           <TabsTrigger value="list">가족 목록</TabsTrigger>
         </TabsList>
         <TabsContent value="tree">
-          <FamilyTreeTab tree={familyTree} />
+          <FamilyTreeTab data={familyGraphData} />
         </TabsContent>
         <TabsContent value="list">
           <FamilyListTab persons={familyGraphData.persons} />

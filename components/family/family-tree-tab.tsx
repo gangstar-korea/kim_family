@@ -1,10 +1,13 @@
 import { FamilyTreeView } from "@/components/family/family-tree";
-import type { FamilyTree } from "@/lib/family/tree-adapter";
+import { buildFamilyTree } from "@/lib/family/tree-adapter";
+import type { FamilyGraphData } from "@/lib/types";
 
 type FamilyTreeTabProps = {
-  tree: FamilyTree;
+  data: FamilyGraphData;
 };
 
-export function FamilyTreeTab({ tree }: FamilyTreeTabProps) {
+export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
+  const tree = buildFamilyTree(data.persons, data.relationships);
+
   return <FamilyTreeView tree={tree} />;
 }
