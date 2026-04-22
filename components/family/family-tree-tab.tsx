@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { FamilyRelationshipTree } from "@/components/family/family-relationship-tree";
-import { buildFamilyTree } from "@/lib/family/tree-adapter";
+import { buildFamilyHierarchyTree } from "@/lib/family/tree-adapter";
 import type { FamilyGraphData } from "@/lib/types";
 
 const TEXT = {
@@ -15,7 +15,7 @@ type FamilyTreeTabProps = {
 };
 
 export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
-  const tree = buildFamilyTree(data.persons, data.relationships);
+  const tree = buildFamilyHierarchyTree(data.persons, data.relationships, 3);
 
   return <FamilyTreeStage tree={<FamilyRelationshipTree tree={tree} />} />;
 }

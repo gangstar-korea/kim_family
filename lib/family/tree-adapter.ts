@@ -24,6 +24,15 @@ export type FamilyTree = {
   generations: FamilyGenerationGroup[];
 };
 
+export type FamilyHierarchyNode = {
+  unit: FamilyUnit;
+  children: FamilyHierarchyNode[];
+};
+
+export type FamilyHierarchyTree = {
+  roots: FamilyHierarchyNode[];
+};
+
 const UNKNOWN_DEPTH = 999;
 const UNKNOWN_ORDER = 999;
 const UNKNOWN_DATE = "9999-99-99";
@@ -281,4 +290,109 @@ export function countFamilyTreeNodes(tree: FamilyTree) {
       ),
     0,
   );
+}
+
+export function buildFamilyHierarchyTree(
+  persons: Person[],
+  relationships: Relationship[],
+  maxDepth = 3,
+): FamilyHierarchyTree {
+  const generationTree = buildFamilyTree(persons, relationships);
+  const units = generationTree.generations.flatMap((generation) => generation.units);
+  const personById = new Map(persons.map((person) => [person.id, person]));
+  const unitByPrimaryId = new Map(units.map((unit) => [unit.primary.id, unit]));
+  const spouseToBloodPrimaryId = new Map<string, string>();
+  const bloodParentIdsByChildId = new Map<string, Set<string>>();
+  const childIdsByBloodParentId = new Map<string, Set<string>>();
+
+  units.forEach((unit) => {
+    unit.spouses.forEach((spouse) => {
+      spouseToBloodPrimaryId.set(spouse.id, unit.primary.id);
+    });
+  });
+
+  relationships.forEach((relationship) => {
+    const person = personById.get(relationship.person_id);
+    const relatedPerson = personById.get(relationship.related_person_id);
+
+    if (!person || !relatedPerson || relationship.relation_type === "spouse") {
+      return;
+    }
+
+    const parentChild = relationToParentChild(relationship, person, relatedPerson);
+
+    if (!parentChild) {
+      return;
+    }
+
+    const parent = personById.get(parentChild.parentId);
+    const child = personById.get(parentChild.childId);
+
+    if (!parent || !child || child.family_role_type !== "blood") {
+      return;
+    }
+
+    const bloodParentId =
+      parent.family_role_type === "blood"
+        ? parent.id
+        : spouseToBloodPrimaryId.get(parent.id);
+
+    if (!bloodParentId || !unitByPrimaryId.has(bloodParentId)) {
+      return;
+    }
+
+    const parentSet = bloodParentIdsByChildId.get(child.id) ?? new Set<string>();
+    parentSet.add(bloodParentId);
+    bloodParentIdsByChildId.set(child.id, parentSet);
+
+    const childSet = childIdsByBloodParentId.get(bloodParentId) ?? new Set<string>();
+    childSet.add(child.id);
+    childIdsByBloodParentId.set(bloodParentId, childSet);
+  });
+
+  const knownGenerationDepths = units
+    .map((unit) => unit.primary.generation_depth)
+    .filter((depth): depth is number => typeof depth === "number");
+  const minGenerationDepth =
+    knownGenerationDepths.length > 0 ? Math.min(...knownGenerationDepths) : null;
+  const rootUnits = units
+    .filter((unit) => {
+      if (minGenerationDepth !== null) {
+        return unit.primary.generation_depth === minGenerationDepth;
+      }
+
+      return (bloodParentIdsByChildId.get(unit.primary.id)?.size ?? 0) === 0;
+    })
+    .sort((a, b) => a.lineageSortKey.localeCompare(b.lineageSortKey, "ko"));
+
+  function buildNode(
+    unit: FamilyUnit,
+    depth: number,
+    visiting = new Set<string>(),
+  ): FamilyHierarchyNode {
+    if (depth >= maxDepth || visiting.has(unit.primary.id)) {
+      return {
+        unit,
+        children: [],
+      };
+    }
+
+    const nextVisiting = new Set(visiting);
+    nextVisiting.add(unit.primary.id);
+
+    const children = [...(childIdsByBloodParentId.get(unit.primary.id) ?? [])]
+      .map((childId) => unitByPrimaryId.get(childId))
+      .filter((childUnit): childUnit is FamilyUnit => Boolean(childUnit))
+      .sort((a, b) => a.lineageSortKey.localeCompare(b.lineageSortKey, "ko"))
+      .map((childUnit) => buildNode(childUnit, depth + 1, nextVisiting));
+
+    return {
+      unit,
+      children,
+    };
+  }
+
+  return {
+    roots: rootUnits.map((unit) => buildNode(unit, 1)),
+  };
 }

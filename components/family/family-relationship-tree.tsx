@@ -4,7 +4,11 @@ import { useState } from "react";
 import { CalendarDays, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import type { FamilyTree, FamilyUnitMember } from "@/lib/family/tree-adapter";
+import type {
+  FamilyHierarchyNode,
+  FamilyHierarchyTree,
+  FamilyUnitMember,
+} from "@/lib/family/tree-adapter";
 import type { Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -33,13 +37,13 @@ const TEXT = {
 };
 
 type FamilyRelationshipTreeProps = {
-  tree: FamilyTree;
+  tree: FamilyHierarchyTree;
 };
 
 export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
-  if (tree.generations.length === 0) {
+  if (tree.roots.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
         {TEXT.noTree}
@@ -49,57 +53,14 @@ export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
 
   return (
     <>
-      <div className="overflow-x-auto pb-2">
-        <div className="min-w-full space-y-4">
-          {tree.generations.map((generation, index) => (
-            <section key={generation.generationDepth ?? "unknown"} className="relative">
-              {index > 0 ? (
-                <div className="mx-auto mb-3 h-5 w-px bg-border" aria-hidden />
-              ) : null}
-
-              <div className="mb-2 flex items-center gap-2">
-                <h3 className="text-sm font-bold">{generation.label}</h3>
-                <span className="h-px flex-1 bg-border" aria-hidden />
-              </div>
-
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {generation.units.map((unit) => {
-                  const members: FamilyUnitMember[] = [
-                    { person: unit.primary, role: "primary" },
-                    ...unit.spouses.map((spouse) => ({
-                      person: spouse,
-                      role: "spouse" as const,
-                    })),
-                  ];
-
-                  return (
-                    <div
-                      key={unit.id}
-                      className="shrink-0 rounded-lg border border-border bg-background p-2 shadow-sm"
-                    >
-                      <div className="flex items-stretch gap-1.5">
-                        {members.map((member, memberIndex) => (
-                          <div key={member.person.id} className="flex items-center gap-1.5">
-                            {memberIndex > 0 ? (
-                              <span
-                                className="text-[10px] font-semibold text-muted-foreground"
-                                aria-label={TEXT.spouseSeparator}
-                              >
-                                +
-                              </span>
-                            ) : null}
-                            <TreePersonButton
-                              member={member}
-                              onSelect={setSelectedPerson}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+      <div className="overflow-x-auto pb-3">
+        <div className="flex min-w-max justify-center gap-8 px-2">
+          {tree.roots.map((root) => (
+            <HierarchyNodeView
+              key={root.unit.id}
+              node={root}
+              onSelectPerson={setSelectedPerson}
+            />
           ))}
         </div>
       </div>
@@ -109,6 +70,78 @@ export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
         onClose={() => setSelectedPerson(null)}
       />
     </>
+  );
+}
+
+function HierarchyNodeView({
+  node,
+  onSelectPerson,
+}: {
+  node: FamilyHierarchyNode;
+  onSelectPerson: (person: Person) => void;
+}) {
+  const members: FamilyUnitMember[] = [
+    { person: node.unit.primary, role: "primary" },
+    ...node.unit.spouses.map((spouse) => ({
+      person: spouse,
+      role: "spouse" as const,
+    })),
+  ];
+  const hasChildren = node.children.length > 0;
+
+  return (
+    <div className="flex flex-col items-center">
+      <CoupleUnitCard members={members} onSelectPerson={onSelectPerson} />
+
+      {hasChildren ? (
+        <>
+          <div className="h-5 w-px bg-border" aria-hidden />
+          <div className="relative flex justify-center gap-5 pt-5">
+            <div className="absolute left-1/2 right-1/2 top-0 h-px bg-border" aria-hidden />
+            {node.children.length > 1 ? (
+              <div
+                className="absolute left-10 right-10 top-0 h-px bg-border"
+                aria-hidden
+              />
+            ) : null}
+            {node.children.map((child) => (
+              <div key={child.unit.id} className="relative flex flex-col items-center">
+                <div className="absolute -top-5 h-5 w-px bg-border" aria-hidden />
+                <HierarchyNodeView node={child} onSelectPerson={onSelectPerson} />
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function CoupleUnitCard({
+  members,
+  onSelectPerson,
+}: {
+  members: FamilyUnitMember[];
+  onSelectPerson: (person: Person) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-background p-2 shadow-sm">
+      <div className="flex items-stretch gap-1.5">
+        {members.map((member, index) => (
+          <div key={member.person.id} className="flex items-center gap-1.5">
+            {index > 0 ? (
+              <span
+                className="text-[10px] font-semibold text-muted-foreground"
+                aria-label={TEXT.spouseSeparator}
+              >
+                +
+              </span>
+            ) : null}
+            <TreePersonButton member={member} onSelect={onSelectPerson} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
