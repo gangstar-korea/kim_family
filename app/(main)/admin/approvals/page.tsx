@@ -65,20 +65,18 @@ export default async function AdminApprovalsPage({
         </CardContent>
       </Card>
 
-      {approvalItems.length === 0 ? (
+          {approvalItems.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">{TEXT.empty}</CardContent>
         </Card>
       ) : (
         approvalItems.map((item) => (
-          <Card key={item.joinRequest.id}>
+          <Card key={item.joinRequest?.id ?? item.accountId}>
             <CardHeader className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg">
-                    {item.profile?.display_name ?? item.joinRequest.display_name}
-                  </CardTitle>
-                  <CardDescription>{item.joinRequest.user_id}</CardDescription>
+                  <CardTitle className="text-lg">{item.displayName}</CardTitle>
+                  <CardDescription>{item.accountId}</CardDescription>
                 </div>
                 <StatusBadge status={item.effectiveStatus} />
               </div>
@@ -86,29 +84,17 @@ export default async function AdminApprovalsPage({
 
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <InfoItem label={TEXT.accountId} value={item.joinRequest.user_id} />
-                <InfoItem
-                  label={TEXT.name}
-                  value={item.profile?.display_name ?? item.joinRequest.display_name}
-                />
-                <InfoItem
-                  label={TEXT.phone}
-                  value={item.profile?.phone ?? item.joinRequest.phone}
-                />
-                <InfoItem
-                  label={TEXT.branch}
-                  value={formatBranchCode(item.joinRequest.branch_code)}
-                />
-                <InfoItem
-                  label={TEXT.familyRole}
-                  value={formatFamilyRole(item.joinRequest.family_role_type)}
-                />
-                <InfoItem label={TEXT.joinedAt} value={formatDateTime(item.joinRequest.created_at)} />
+                <InfoItem label={TEXT.accountId} value={item.accountId} />
+                <InfoItem label={TEXT.name} value={item.displayName} />
+                <InfoItem label={TEXT.phone} value={item.phone} />
+                <InfoItem label={TEXT.branch} value={formatBranchCode(item.branchCode)} />
+                <InfoItem label={TEXT.familyRole} value={formatFamilyRole(item.familyRoleType)} />
+                <InfoItem label={TEXT.joinedAt} value={formatDateTime(item.createdAt)} />
                 <InfoItem label={TEXT.personLink} value={item.personId ?? "-"} />
                 <InfoItem label={TEXT.role} value={formatRole(item.role)} />
               </div>
 
-              {item.effectiveStatus === "pending" ? (
+              {item.effectiveStatus === "pending" && item.joinRequest ? (
                 <div className="flex gap-2">
                   <form action={approveJoinRequestAction.bind(null, item.joinRequest.id)}>
                     <Button type="submit">{TEXT.approve}</Button>
@@ -119,6 +105,10 @@ export default async function AdminApprovalsPage({
                     </Button>
                   </form>
                 </div>
+              ) : item.effectiveStatus === "pending" ? (
+                <p className="text-sm text-muted-foreground">
+                  가입 신청 기록이 없어 이 화면에서는 바로 처리할 수 없습니다.
+                </p>
               ) : null}
             </CardContent>
           </Card>
@@ -144,11 +134,19 @@ function getFeedbackMessage(result: string | undefined) {
   return null;
 }
 
-function formatBranchCode(branchCode: string) {
+function formatBranchCode(branchCode: string | null) {
+  if (!branchCode) {
+    return "-";
+  }
+
   return BRANCH_OPTIONS.find((option) => option.value === branchCode)?.label ?? branchCode;
 }
 
-function formatFamilyRole(familyRoleType: string) {
+function formatFamilyRole(familyRoleType: string | null) {
+  if (!familyRoleType) {
+    return "-";
+  }
+
   return (
     FAMILY_ROLE_OPTIONS.find((option) => option.value === familyRoleType)?.label ??
     familyRoleType
