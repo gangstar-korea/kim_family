@@ -5,6 +5,8 @@ import { getCurrentUserProfile } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 
 const TEXT = {
+  missingProfileTitle: "로그인 계정 확인이 필요합니다.",
+  missingProfileDescription: "현재 로그인 계정과 가족 프로필 연결 정보를 찾지 못했습니다.",
   pendingTitle: "현재 가입 승인 대기 중입니다.",
   pendingDescription: "관리자 승인 후 이용하실 수 있습니다.",
   rejectedTitle: "가입 신청이 반려되었습니다.",
@@ -34,7 +36,23 @@ export default async function MePage() {
     );
   }
 
-  if (!profile || profile.status === "pending") {
+  if (!profile) {
+    return (
+      <PageContainer>
+        <Card>
+          <CardHeader>
+            <CardTitle>{TEXT.missingProfileTitle}</CardTitle>
+            <CardDescription>{TEXT.missingProfileDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm leading-6 text-muted-foreground">
+            로그인은 되었지만 이 계정에 연결된 user_profiles 정보를 찾지 못했습니다. 관리자에게 계정 연결 상태를 확인해 주세요.
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (profile.status === "pending") {
     return (
       <PageContainer>
         <Card>
