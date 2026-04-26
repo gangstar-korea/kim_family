@@ -149,7 +149,7 @@ function buildExplorerColumns(
     },
   ];
 
-  selectedPath.forEach((nodeId, index) => {
+  selectedPath.forEach((nodeId) => {
     const node = nodeById.get(nodeId);
 
     if (!node) {
