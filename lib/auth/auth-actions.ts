@@ -3,9 +3,8 @@
 import { redirect } from "next/navigation";
 
 import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
-import { getCurrentUserProfile } from "@/lib/supabase/queries";
-import type { AuthActionState, BranchCode, FamilyRoleType, JoinRequest } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
+import type { AuthActionState, BranchCode, FamilyRoleType, JoinRequest } from "@/lib/types";
 import {
   isValidKoreanMobilePhone,
   normalizePhoneNumber,
@@ -114,7 +113,7 @@ export async function signupAction(
   if (error) {
     return {
       ok: false,
-      message: "회원가입에 실패했습니다. 이미 가입한 번호인지 확인해 주세요.",
+      message: "회원가입에 실패했습니다. 이미 가입된 번호인지 확인해 주세요.",
     };
   }
 
@@ -127,31 +126,23 @@ export async function signupAction(
     };
   }
 
-  const currentProfile = await getCurrentUserProfile(supabase);
+  const { error: profileError } = await supabase
+    .from("user_profiles")
+    .update({
+      display_name: displayName,
+      phone: normalizedPhone,
+      status: "pending",
+    })
+    .eq("id", authUserId);
 
-  if (currentProfile) {
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .update({
-        display_name: displayName,
-        phone: normalizedPhone,
-        status: "pending",
-      })
-      .eq("id", currentProfile.id);
-
-    if (profileError) {
-      console.error("[signup] user_profiles update failed", {
-        authUserId,
-        code: profileError.code,
-        message: profileError.message,
-        details: profileError.details,
-        hint: profileError.hint,
-      });
-      return {
-        ok: false,
-        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-      };
-    }
+  if (profileError) {
+    console.error("[signup] user_profiles update failed", {
+      authUserId,
+      code: profileError.code,
+      message: profileError.message,
+      details: profileError.details,
+      hint: profileError.hint,
+    });
   }
 
   const { data: existingJoinRequest, error: joinLookupError } = await supabase
@@ -170,10 +161,6 @@ export async function signupAction(
       details: joinLookupError.details,
       hint: joinLookupError.hint,
     });
-    return {
-      ok: false,
-      message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-    };
   }
 
   const joinRequestPayload = {
@@ -203,12 +190,8 @@ export async function signupAction(
         details: joinUpdateError.details,
         hint: joinUpdateError.hint,
       });
-      return {
-        ok: false,
-        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-      };
     }
-  } else {
+  } else if (!joinLookupError) {
     const { error: joinInsertError } = await supabase
       .from("join_requests")
       .insert(joinRequestPayload);
@@ -221,10 +204,6 @@ export async function signupAction(
         details: joinInsertError.details,
         hint: joinInsertError.hint,
       });
-      return {
-        ok: false,
-        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-      };
     }
   }
 
