@@ -16,6 +16,7 @@ export type FamilyRoleType = "blood" | "spouse";
 export type RelationshipType = "parent" | "child" | "spouse";
 
 export type RequestStatus = "pending" | "approved" | "rejected";
+export type ApprovalStatus = RequestStatus;
 
 export type ISODateString = string;
 export type ISODateTimeString = string;
@@ -69,11 +70,9 @@ export interface UserProfile {
   phone: string;
   display_name: string;
   role: AppRole;
+  status: ApprovalStatus;
   branch_code: BranchCode;
   family_role_type: FamilyRoleType;
-  approved: boolean;
-  approved_at: ISODateTimeString | null;
-  approved_by: EntityId | null;
   created_at: ISODateTimeString;
   updated_at: ISODateTimeString;
 }
@@ -93,6 +92,12 @@ export interface JoinRequest {
   created_at: ISODateTimeString;
   updated_at: ISODateTimeString;
 }
+
+export type CurrentApprovalState = {
+  profile: UserProfile | null;
+  latestJoinRequest: JoinRequest | null;
+  status: ApprovalStatus;
+};
 
 export interface EditRequest {
   id: EntityId;

@@ -52,7 +52,7 @@ export async function updatePersonAction(
 
   const currentUserProfile = await getCurrentUserProfile(supabase);
 
-  if (!currentUserProfile?.approved) {
+  if (currentUserProfile?.status !== "approved") {
     return { ok: false, message: NO_PERMISSION_MESSAGE };
   }
 
@@ -140,7 +140,7 @@ export async function addChildAction(
 
   const currentUserProfile = await getCurrentUserProfile(supabase);
 
-  if (!currentUserProfile?.approved) {
+  if (currentUserProfile?.status !== "approved") {
     return { ok: false, message: NO_PERMISSION_MESSAGE };
   }
 
@@ -308,7 +308,7 @@ export async function addSpouseAction(
 
   const currentUserProfile = await getCurrentUserProfile(supabase);
 
-  if (!currentUserProfile?.approved) {
+  if (currentUserProfile?.status !== "approved") {
     return { ok: false, message: NO_PERMISSION_MESSAGE };
   }
 

@@ -7,6 +7,7 @@ import type {
   Person,
   Relationship,
   UserProfile,
+  CurrentApprovalState,
 } from "@/lib/types";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -33,6 +34,58 @@ export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
   }
 
   return data;
+}
+
+export async function getCurrentUserJoinRequest(supabase: SupabaseServerClient) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("join_requests")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<JoinRequest>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getCurrentApprovalState(
+  supabase: SupabaseServerClient,
+): Promise<CurrentApprovalState | null> {
+  const [profile, latestJoinRequest] = await Promise.all([
+    getCurrentUserProfile(supabase),
+    getCurrentUserJoinRequest(supabase),
+  ]);
+
+  if (!profile && !latestJoinRequest) {
+    return null;
+  }
+
+  if (profile?.status === "approved") {
+    return {
+      profile,
+      latestJoinRequest,
+      status: "approved",
+    };
+  }
+
+  return {
+    profile,
+    latestJoinRequest,
+    status: profile?.status ?? latestJoinRequest?.status ?? "pending",
+  };
 }
 
 export async function getPersonsByBranch(
@@ -183,6 +236,20 @@ export async function getPendingJoinRequests(supabase: SupabaseServerClient) {
     .select("*")
     .eq("status", "pending")
     .order("created_at", { ascending: true })
+    .returns<JoinRequest[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getAllJoinRequests(supabase: SupabaseServerClient) {
+  const { data, error } = await supabase
+    .from("join_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
     .returns<JoinRequest[]>();
 
   if (error) {

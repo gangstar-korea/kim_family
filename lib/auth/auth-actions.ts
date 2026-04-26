@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 
 import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
-import type { AuthActionState, BranchCode, FamilyRoleType } from "@/lib/types";
+import { getCurrentApprovalState, getCurrentUserProfile } from "@/lib/supabase/queries";
+import type { AuthActionState, BranchCode, FamilyRoleType, JoinRequest } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import {
   isValidKoreanMobilePhone,
@@ -54,7 +55,13 @@ export async function loginAction(
     };
   }
 
-  redirect("/");
+  const approvalState = await getCurrentApprovalState(supabase);
+
+  if (!approvalState || approvalState.status === "approved") {
+    redirect("/");
+  }
+
+  redirect("/me");
 }
 
 export async function signupAction(
@@ -88,7 +95,7 @@ export async function signupAction(
   }
 
   if (!isBranchCode(branchCode)) {
-    return { ok: false, message: "지파를 선택해 주세요." };
+    return { ok: false, message: "1대 가족을 선택해 주세요." };
   }
 
   if (!isFamilyRoleType(familyRoleType)) {
@@ -97,7 +104,7 @@ export async function signupAction(
 
   const normalizedPhone = normalizePhoneNumber(phone);
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data: signupData, error } = await supabase.auth.signUp({
     email: phoneToInternalEmail(phone),
     password,
     options: {
@@ -113,12 +120,120 @@ export async function signupAction(
   if (error) {
     return {
       ok: false,
-      message: "회원가입에 실패했습니다. 이미 가입된 번호인지 확인해 주세요.",
+      message: "회원가입에 실패했습니다. 이미 가입한 번호인지 확인해 주세요.",
     };
+  }
+
+  const authUserId = signupData.user?.id;
+
+  if (!authUserId) {
+    return {
+      ok: false,
+      message: "가입 신청 처리 중 사용자 정보를 확인하지 못했습니다. 다시 시도해 주세요.",
+    };
+  }
+
+  const currentProfile = await getCurrentUserProfile(supabase);
+
+  if (currentProfile) {
+    const { error: profileError } = await supabase
+      .from("user_profiles")
+      .update({
+        display_name: displayName,
+        phone: normalizedPhone,
+        branch_code: branchCode,
+        family_role_type: familyRoleType,
+        status: "pending",
+      })
+      .eq("id", currentProfile.id);
+
+    if (profileError) {
+      console.error("[signup] user_profiles update failed", {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
+      });
+      return {
+        ok: false,
+        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+      };
+    }
+  }
+
+  const { data: existingJoinRequest, error: joinLookupError } = await supabase
+    .from("join_requests")
+    .select("*")
+    .eq("user_id", authUserId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<JoinRequest>();
+
+  if (joinLookupError) {
+    console.error("[signup] join request lookup failed", {
+      code: joinLookupError.code,
+      message: joinLookupError.message,
+      details: joinLookupError.details,
+      hint: joinLookupError.hint,
+    });
+    return {
+      ok: false,
+      message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  const joinRequestPayload = {
+    user_id: authUserId,
+    person_id: existingJoinRequest?.person_id ?? null,
+    phone: normalizedPhone,
+    display_name: displayName,
+    branch_code: branchCode,
+    family_role_type: familyRoleType,
+    status: "pending" as const,
+    reviewed_by: null,
+    reviewed_at: null,
+    rejection_reason: null,
+  };
+
+  if (existingJoinRequest) {
+    const { error: joinUpdateError } = await supabase
+      .from("join_requests")
+      .update(joinRequestPayload)
+      .eq("id", existingJoinRequest.id);
+
+    if (joinUpdateError) {
+      console.error("[signup] join request update failed", {
+        code: joinUpdateError.code,
+        message: joinUpdateError.message,
+        details: joinUpdateError.details,
+        hint: joinUpdateError.hint,
+      });
+      return {
+        ok: false,
+        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+      };
+    }
+  } else {
+    const { error: joinInsertError } = await supabase
+      .from("join_requests")
+      .insert(joinRequestPayload);
+
+    if (joinInsertError) {
+      console.error("[signup] join request insert failed", {
+        code: joinInsertError.code,
+        message: joinInsertError.message,
+        details: joinInsertError.details,
+        hint: joinInsertError.hint,
+      });
+      return {
+        ok: false,
+        message: "가입 신청 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+      };
+    }
   }
 
   return {
     ok: true,
-    message: "가입 신청이 접수되었습니다. 관리자 승인 후 이용할 수 있습니다.",
+    message: "가입 신청이 완료되었습니다. 관리자 승인 후 이용할 수 있습니다.",
   };
 }

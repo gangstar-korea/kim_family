@@ -1,6 +1,6 @@
 import { FamilyTreeTab } from "@/components/family/family-tree-tab";
 import { PageContainer } from "@/components/layout/page-container";
-import { requireAuthenticatedUser } from "@/lib/auth/guards";
+import { requireApprovedProfile } from "@/lib/auth/guards";
 import { getCurrentUserProfile, getFamilyGraphData } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,7 +11,7 @@ const TEXT = {
 };
 
 export default async function HomePage() {
-  await requireAuthenticatedUser();
+  await requireApprovedProfile();
 
   const supabase = await createClient();
   const [currentUserProfile, familyGraphData] = await Promise.all([
