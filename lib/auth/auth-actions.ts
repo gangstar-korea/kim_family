@@ -135,14 +135,13 @@ export async function signupAction(
       .update({
         display_name: displayName,
         phone: normalizedPhone,
-        branch_code: branchCode,
-        family_role_type: familyRoleType,
         status: "pending",
       })
       .eq("id", currentProfile.id);
 
     if (profileError) {
       console.error("[signup] user_profiles update failed", {
+        authUserId,
         code: profileError.code,
         message: profileError.message,
         details: profileError.details,
@@ -165,6 +164,7 @@ export async function signupAction(
 
   if (joinLookupError) {
     console.error("[signup] join request lookup failed", {
+      authUserId,
       code: joinLookupError.code,
       message: joinLookupError.message,
       details: joinLookupError.details,
@@ -197,6 +197,7 @@ export async function signupAction(
 
     if (joinUpdateError) {
       console.error("[signup] join request update failed", {
+        authUserId,
         code: joinUpdateError.code,
         message: joinUpdateError.message,
         details: joinUpdateError.details,
@@ -214,6 +215,7 @@ export async function signupAction(
 
     if (joinInsertError) {
       console.error("[signup] join request insert failed", {
+        authUserId,
         code: joinInsertError.code,
         message: joinInsertError.message,
         details: joinInsertError.details,
