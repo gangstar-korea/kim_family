@@ -70,26 +70,28 @@ export interface UserProfile {
   display_name: string;
   role: AppRole;
   status: ApprovalStatus;
-  branch_code: BranchCode;
-  family_role_type: FamilyRoleType;
+  branch_code?: BranchCode | null;
+  family_role_type?: FamilyRoleType | null;
   created_at: ISODateTimeString;
   updated_at: ISODateTimeString;
 }
 
 export interface JoinRequest {
-  id: EntityId;
-  user_id: EntityId;
-  person_id: EntityId | null;
-  phone: string;
-  display_name: string;
-  branch_code: BranchCode;
-  family_role_type: FamilyRoleType;
+  requester_user_id: EntityId;
+  request_type: string;
+  applicant_name: string;
+  applicant_phone: string;
+  relation_hint: string | null;
+  payload: {
+    branch_code?: BranchCode | null;
+    family_role_type?: FamilyRoleType | null;
+    person_id?: EntityId | null;
+  } | null;
   status: RequestStatus;
   reviewed_by: EntityId | null;
   reviewed_at: ISODateTimeString | null;
-  rejection_reason: string | null;
+  review_note: string | null;
   created_at: ISODateTimeString;
-  updated_at: ISODateTimeString;
 }
 
 export type CurrentApprovalState = {

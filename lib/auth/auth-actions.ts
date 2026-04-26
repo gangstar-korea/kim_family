@@ -148,7 +148,7 @@ export async function signupAction(
   const { data: existingJoinRequest, error: joinLookupError } = await supabase
     .from("join_requests")
     .select("*")
-    .eq("user_id", authUserId)
+    .eq("requester_user_id", authUserId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<JoinRequest>();
@@ -164,23 +164,28 @@ export async function signupAction(
   }
 
   const joinRequestPayload = {
-    user_id: authUserId,
-    person_id: existingJoinRequest?.person_id ?? null,
-    phone: normalizedPhone,
-    display_name: displayName,
-    branch_code: branchCode,
-    family_role_type: familyRoleType,
+    requester_user_id: authUserId,
+    request_type: "signup",
+    applicant_name: displayName,
+    applicant_phone: normalizedPhone,
+    relation_hint: `${branchCode}:${familyRoleType}`,
+    payload: {
+      branch_code: branchCode,
+      family_role_type: familyRoleType,
+      person_id: existingJoinRequest?.payload?.person_id ?? null,
+    },
     status: "pending" as const,
     reviewed_by: null,
     reviewed_at: null,
-    rejection_reason: null,
+    review_note: null,
   };
 
   if (existingJoinRequest) {
     const { error: joinUpdateError } = await supabase
       .from("join_requests")
       .update(joinRequestPayload)
-      .eq("id", existingJoinRequest.id);
+      .eq("requester_user_id", authUserId)
+      .eq("created_at", existingJoinRequest.created_at);
 
     if (joinUpdateError) {
       console.error("[signup] join request update failed", {

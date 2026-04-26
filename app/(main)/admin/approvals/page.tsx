@@ -1,7 +1,7 @@
 import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
 import {
   approveJoinRequestAction,
-  approveUserProfileAction,
+  approveUserProfileWithJoinRequestAction,
   rejectJoinRequestAction,
   rejectUserProfileAction,
 } from "@/lib/auth/approval-actions";
@@ -76,7 +76,7 @@ export default async function AdminApprovalsPage({
         </Card>
       ) : (
         approvalItems.map((item) => (
-          <Card key={item.joinRequest?.id ?? item.accountId}>
+          <Card key={`${item.accountId}-${item.createdAt}`}>
             <CardHeader className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
@@ -102,10 +102,10 @@ export default async function AdminApprovalsPage({
 
               {item.effectiveStatus === "pending" && item.joinRequest ? (
                 <div className="flex gap-2">
-                  <form action={approveJoinRequestAction.bind(null, item.joinRequest.id)}>
+                  <form action={approveJoinRequestAction.bind(null, item.accountId)}>
                     <Button type="submit">{TEXT.approve}</Button>
                   </form>
-                  <form action={rejectJoinRequestAction.bind(null, item.joinRequest.id)}>
+                  <form action={rejectJoinRequestAction.bind(null, item.accountId)}>
                     <Button type="submit" variant="outline">
                       {TEXT.reject}
                     </Button>
@@ -114,10 +114,53 @@ export default async function AdminApprovalsPage({
               ) : item.effectiveStatus === "pending" ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">{TEXT.missingJoinRequest}</p>
-                  <div className="flex gap-2">
-                    <form action={approveUserProfileAction.bind(null, item.accountId)}>
+                  <form
+                    action={approveUserProfileWithJoinRequestAction.bind(null, item.accountId)}
+                    className="space-y-3"
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="space-y-1 text-sm">
+                        <span className="text-muted-foreground">{TEXT.branch}</span>
+                        <select
+                          name="branchCode"
+                          defaultValue=""
+                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          required
+                        >
+                          <option value="" disabled>
+                            1대 가족 선택
+                          </option>
+                          {BRANCH_OPTIONS.filter((option) => option.value !== "ROOT").map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm">
+                        <span className="text-muted-foreground">{TEXT.familyRole}</span>
+                        <select
+                          name="familyRoleType"
+                          defaultValue=""
+                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          required
+                        >
+                          <option value="" disabled>
+                            가족 구분 선택
+                          </option>
+                          {FAMILY_ROLE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
                       <Button type="submit">{TEXT.approve}</Button>
-                    </form>
+                    </div>
+                  </form>
+                  <div className="flex gap-2">
                     <form action={rejectUserProfileAction.bind(null, item.accountId)}>
                       <Button type="submit" variant="outline">
                         {TEXT.reject}
