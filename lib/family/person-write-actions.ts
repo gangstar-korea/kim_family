@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { canAddChild, canAddSpouse, canEditPerson } from "@/lib/family/permissions";
 import {
   buildChildDraft,
   buildPersonUpdatePayload,
@@ -9,6 +10,7 @@ import {
   incrementBloodInternalCode,
   validatePersonFormValues,
 } from "@/lib/family/person-write-adapter";
+import { getCurrentUserProfile } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Person,
@@ -18,6 +20,7 @@ import type {
 } from "@/lib/types";
 
 const PATHS_TO_REVALIDATE = ["/"];
+const NO_PERMISSION_MESSAGE = "이 작업을 수행할 권한이 없습니다.";
 
 type WriteErrorShape = {
   code?: string | null;
@@ -47,6 +50,12 @@ export async function updatePersonAction(
     return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
+  const currentUserProfile = await getCurrentUserProfile(supabase);
+
+  if (!currentUserProfile?.approved) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
+  }
+
   const { data: existingPerson, error: personError } = await supabase
     .from("persons")
     .select("*")
@@ -59,6 +68,23 @@ export async function updatePersonAction(
       error: personError?.message ?? "person not found",
     });
     return { ok: false, message: "수정할 가족 정보를 찾지 못했습니다." };
+  }
+
+  const context = await getPermissionContext(supabase);
+
+  if (!context.ok) {
+    return context.result;
+  }
+
+  if (
+    !canEditPerson(
+      currentUserProfile,
+      existingPerson,
+      context.persons,
+      context.relationships,
+    )
+  ) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
   }
 
   const payload = buildPersonUpdatePayload(existingPerson, values, user.id);
@@ -112,6 +138,12 @@ export async function addChildAction(
     return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
+  const currentUserProfile = await getCurrentUserProfile(supabase);
+
+  if (!currentUserProfile?.approved) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
+  }
+
   const { data: parentPerson, error: parentError } = await supabase
     .from("persons")
     .select("*")
@@ -126,24 +158,14 @@ export async function addChildAction(
     return { ok: false, message: "기준 부모 정보를 찾지 못했습니다." };
   }
 
-  const { data: existingPersons, error: existingPersonsError } = await supabase
-    .from("persons")
-    .select("*")
-    .returns<Person[]>();
+  const context = await getPermissionContext(supabase);
 
-  if (existingPersonsError) {
-    console.error("[person write] child existing persons lookup failed", {
-      parentId,
-      branchCode: parentPerson.branch_code,
-      code: existingPersonsError.code,
-      message: existingPersonsError.message,
-      details: existingPersonsError.details,
-      hint: existingPersonsError.hint,
-    });
-    return {
-      ok: false,
-      message: buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError),
-    };
+  if (!context.ok) {
+    return context.result;
+  }
+
+  if (!canAddChild(currentUserProfile, parentPerson, context.persons, context.relationships)) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
   }
 
   let personDraft: PersonInsertDraft;
@@ -151,7 +173,7 @@ export async function addChildAction(
   try {
     personDraft = buildChildDraft({
       parent: parentPerson,
-      existingPersons: existingPersons ?? [],
+      existingPersons: context.persons,
       values,
       actorUserId: user.id,
     });
@@ -284,6 +306,12 @@ export async function addSpouseAction(
     return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
+  const currentUserProfile = await getCurrentUserProfile(supabase);
+
+  if (!currentUserProfile?.approved) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
+  }
+
   const { data: targetPerson, error: targetPersonError } = await supabase
     .from("persons")
     .select("*")
@@ -295,33 +323,20 @@ export async function addSpouseAction(
       targetPersonId,
       error: targetPersonError?.message ?? "target not found",
     });
-    return { ok: false, message: "기준 배우자 대상 정보를 찾지 못했습니다." };
+    return { ok: false, message: "기준 사람 정보를 찾지 못했습니다." };
   }
 
-  const { data: existingPersons, error: existingPersonsError } = await supabase
-    .from("persons")
-    .select("*")
-    .returns<Person[]>();
-  const { data: existingRelationships, error: existingRelationshipsError } = await supabase
-    .from("relationships")
-    .select("*")
-    .returns<Relationship[]>();
+  const context = await getPermissionContext(supabase);
 
-  if (existingPersonsError || existingRelationshipsError) {
-    console.error("[person write] spouse context lookup failed", {
-      targetPersonId,
-      existingPersonsError: serializeSupabaseError(existingPersonsError),
-      existingRelationshipsError: serializeSupabaseError(existingRelationshipsError),
-    });
-    return {
-      ok: false,
-      message:
-        buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError) ||
-        buildWriteFailureMessage("관계 데이터 조회", existingRelationshipsError),
-    };
+  if (!context.ok) {
+    return context.result;
   }
 
-  if (hasSpouseRelationship(targetPerson.id, existingRelationships ?? [])) {
+  if (!canAddSpouse(currentUserProfile, targetPerson, context.persons, context.relationships)) {
+    return { ok: false, message: NO_PERMISSION_MESSAGE };
+  }
+
+  if (hasSpouseRelationship(targetPerson.id, context.relationships)) {
     return {
       ok: false,
       message: "이미 배우자 관계가 등록된 가구입니다.",
@@ -333,7 +348,7 @@ export async function addSpouseAction(
   try {
     personDraft = buildSpouseDraft({
       targetPerson,
-      existingPersons: existingPersons ?? [],
+      existingPersons: context.persons,
       values,
       actorUserId: user.id,
     });
@@ -383,7 +398,7 @@ export async function addSpouseAction(
       ok: false,
       message: insertPersonError
         ? isDuplicateInternalCodeError(insertPersonError)
-          ? "배우자 internal_code가 이미 존재합니다. 기존 배우자 등록 여부를 확인해 주세요."
+          ? "이미 해당 배우자 코드가 존재합니다. 기존 배우자 등록 여부를 확인해 주세요."
           : buildWriteFailureMessage("사람 등록", insertPersonError)
         : "사람 등록 후 응답에서 새 person id를 받지 못했습니다.",
     };
@@ -443,6 +458,41 @@ export async function addSpouseAction(
     ok: true,
     message: "배우자를 등록했습니다.",
     personId: insertedPerson.id,
+  };
+}
+
+async function getPermissionContext(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: persons, error: personsError } = await supabase
+    .from("persons")
+    .select("*")
+    .returns<Person[]>();
+  const { data: relationships, error: relationshipsError } = await supabase
+    .from("relationships")
+    .select("*")
+    .returns<Relationship[]>();
+
+  if (personsError || relationshipsError) {
+    console.error("[person write] permission context lookup failed", {
+      personsError: serializeSupabaseError(personsError),
+      relationshipsError: serializeSupabaseError(relationshipsError),
+    });
+
+    return {
+      ok: false as const,
+      result: {
+        ok: false,
+        message: buildWriteFailureMessage(
+          "권한 확인용 데이터 조회",
+          personsError ?? relationshipsError,
+        ),
+      } satisfies PersonWriteActionResult,
+    };
+  }
+
+  return {
+    ok: true as const,
+    persons: persons ?? [],
+    relationships: relationships ?? [],
   };
 }
 
@@ -537,7 +587,7 @@ async function insertBloodPersonWithRetries(
     data: null,
     error: {
       code: null,
-      message: "internal_code 재시도 한도를 초과했습니다.",
+      message: "internal_code 재시도 횟수를 초과했습니다.",
       details: currentDraft.internal_code,
       hint: "persons_internal_code_key",
     } satisfies WriteErrorShape,

@@ -4,36 +4,38 @@ import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
 import { PersonDetailSheet } from "@/components/family/person-detail-sheet";
+import { getPersonActionPermissions } from "@/lib/family/permissions";
 import type {
   FamilyHierarchyNode,
   FamilyHierarchyTree,
   FamilyUnitMember,
 } from "@/lib/family/tree-adapter";
 import { buildPersonRelationsById } from "@/lib/family/tree-adapter";
-import type { Person, Relationship } from "@/lib/types";
+import type { Person, Relationship, UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TEXT = {
-  noTree: "\uD45C\uC2DC\uD560 \uAC00\uC871 \uACC4\uCE35\uB3C4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
-  rootColumn: "\uCD5C\uC0C1\uC704",
-  childColumn: "\uC790\uB140",
-  deceased: "\uACE0\uC778",
-  noChildren: "\uD45C\uC2DC\uD560 \uC790\uB140\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
-  detail: "\uC0C1\uC138",
-  childOf: "\uC758 \uC790\uB140",
-  topPath: "\uCD5C\uC0C1\uC704",
+  noTree: "표시할 가족 계층도가 없습니다.",
+  rootColumn: "최상위",
+  noChildren: "표시할 자녀가 없습니다.",
+  detail: "상세",
+  childOf: "의 자녀",
+  topPath: "최상위",
+  deceased: "고인",
 };
 
 type FamilyRelationshipTreeProps = {
   tree: FamilyHierarchyTree;
   persons: Person[];
   relationships: Relationship[];
+  currentUserProfile?: UserProfile | null;
 };
 
 export function FamilyRelationshipTree({
   tree,
   persons,
   relationships,
+  currentUserProfile,
 }: FamilyRelationshipTreeProps) {
   const defaultSelectedPath = useMemo(() => buildDefaultSelectedPath(tree.roots), [tree.roots]);
   const [selectedPath, setSelectedPath] = useState<string[]>(defaultSelectedPath);
@@ -44,6 +46,18 @@ export function FamilyRelationshipTree({
     () => buildPersonRelationsById(persons, relationships),
     [persons, relationships],
   );
+  const selectedPersonPermissions = useMemo(() => {
+    if (!selectedPerson) {
+      return null;
+    }
+
+    return getPersonActionPermissions(
+      currentUserProfile ?? null,
+      selectedPerson,
+      persons,
+      relationships,
+    );
+  }, [currentUserProfile, persons, relationships, selectedPerson]);
   const columns = buildExplorerColumns(tree.roots, selectedPath, nodeById);
 
   useEffect(() => {
@@ -57,6 +71,10 @@ export function FamilyRelationshipTree({
       block: "nearest",
     });
   }, [selectedPath, columns.length]);
+
+  useEffect(() => {
+    setSelectedPath(defaultSelectedPath);
+  }, [defaultSelectedPath]);
 
   if (tree.roots.length === 0) {
     return (
@@ -103,6 +121,8 @@ export function FamilyRelationshipTree({
         }}
         person={selectedPerson}
         relations={selectedPerson ? relationsById[selectedPerson.id] ?? null : null}
+        currentUserProfile={currentUserProfile ?? null}
+        permissions={selectedPersonPermissions}
       />
     </>
   );
@@ -125,8 +145,7 @@ function buildDefaultSelectedPath(roots: FamilyHierarchyNode[]) {
     return [];
   }
 
-  const rootNode =
-    roots.find((node) => node.unit.primary.branch_code === "ROOT") ?? roots[0];
+  const rootNode = roots.find((node) => node.unit.primary.branch_code === "ROOT") ?? roots[0];
   return [rootNode.unit.id];
 }
 
@@ -134,7 +153,7 @@ function formatFamilyUnitLabel(node: FamilyHierarchyNode) {
   const spouseName = node.unit.spouses[0]?.full_name;
 
   return spouseName
-    ? `${node.unit.primary.full_name}·${spouseName}`
+    ? `${node.unit.primary.full_name} · ${spouseName}`
     : node.unit.primary.full_name;
 }
 
@@ -172,23 +191,21 @@ function buildExplorerColumns(
   return columns;
 }
 
-const ExplorerColumn = forwardRef<HTMLElement, {
-  title: string;
-  parentNode: FamilyHierarchyNode | null;
-  nodes: FamilyHierarchyNode[];
-  selectedNodeId: string | null;
-  columnIndex: number;
-  onSelectNode: (node: FamilyHierarchyNode, columnIndex: number) => void;
-  onSelectPerson: (person: Person) => void;
-}>(function ExplorerColumn({
-  title,
-  parentNode,
-  nodes,
-  selectedNodeId,
-  columnIndex,
-  onSelectNode,
-  onSelectPerson,
-}, ref) {
+const ExplorerColumn = forwardRef<
+  HTMLElement,
+  {
+    title: string;
+    parentNode: FamilyHierarchyNode | null;
+    nodes: FamilyHierarchyNode[];
+    selectedNodeId: string | null;
+    columnIndex: number;
+    onSelectNode: (node: FamilyHierarchyNode, columnIndex: number) => void;
+    onSelectPerson: (person: Person) => void;
+  }
+>(function ExplorerColumn(
+  { title, parentNode, nodes, selectedNodeId, columnIndex, onSelectNode, onSelectPerson },
+  ref,
+) {
   return (
     <section
       ref={ref}
@@ -260,18 +277,16 @@ function ExplorerNodeButton({
         >
           <CoupleUnitCard node={node} onSelectPerson={onSelectPerson} />
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {node.children.length > 0 ? (
-            <button
-              type="button"
-              onClick={onClick}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden />
-              <span className="sr-only">{node.unit.primary.full_name}</span>
-            </button>
-          ) : null}
-        </div>
+        {node.children.length > 0 ? (
+          <button
+            type="button"
+            onClick={onClick}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+            <span className="sr-only">{node.unit.primary.full_name}</span>
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -293,18 +308,10 @@ function CoupleUnitCard({
   ];
 
   return (
-    <div
-      className={cn(
-        "grid min-w-0 gap-1.5",
-        members.length > 1 ? "grid-cols-2" : "grid-cols-1",
-      )}
-    >
+    <div className={cn("grid min-w-0 gap-1.5", members.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
       {members.map((member) => (
         <div key={member.person.id} className="min-w-0">
-          <TreePersonButton
-            member={member}
-            onSelect={onSelectPerson}
-          />
+          <TreePersonButton member={member} onSelect={onSelectPerson} />
         </div>
       ))}
     </div>
@@ -328,13 +335,9 @@ function TreePersonButton({
         !person.is_alive && "bg-muted/50 text-muted-foreground",
       )}
     >
-      <div
-        className="relative flex min-w-0 flex-1 px-3.5 py-2.5 text-left"
-      >
+      <div className="relative flex min-w-0 flex-1 px-3.5 py-2.5 text-left">
         <div className="flex min-h-[40px] w-full items-center">
-          <span className="break-keep text-base font-bold leading-6">
-            {person.full_name}
-          </span>
+          <span className="break-keep text-base font-bold leading-6">{person.full_name}</span>
         </div>
         {!person.is_alive ? (
           <span className="absolute left-1/2 top-2 inline-flex min-w-10 -translate-x-1/2 justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">

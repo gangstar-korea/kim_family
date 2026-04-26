@@ -1,19 +1,23 @@
 import { FamilyTreeTab } from "@/components/family/family-tree-tab";
 import { PageContainer } from "@/components/layout/page-container";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
-import { getFamilyGraphData } from "@/lib/supabase/queries";
+import { getCurrentUserProfile, getFamilyGraphData } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 
 const TEXT = {
-  title: "\uAC00\uC871 \uACF5\uAC04",
+  title: "가족 공간",
   description:
-    "\uCD5C\uC0C1\uC704 \uAC00\uAD6C\uC5D0\uC11C \uC2DC\uC791\uD574 \uC120\uD0DD\uD55C \uC778\uBB3C\uC758 \uC790\uB140 \uAC00\uC9C0\uB97C \uC624\uB978\uCABD\uC73C\uB85C \uD655\uC7A5\uD558\uB294 \uD0D0\uC0C9\uD615 \uAC00\uACC4\uB3C4\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+    "최상위 가구에서 시작해 선택한 인물의 자녀 가지를 오른쪽으로 확장하는 탐색형 가계도를 확인할 수 있습니다.",
 };
 
 export default async function HomePage() {
   await requireAuthenticatedUser();
+
   const supabase = await createClient();
-  const familyGraphData = await getFamilyGraphData(supabase);
+  const [currentUserProfile, familyGraphData] = await Promise.all([
+    getCurrentUserProfile(supabase),
+    getFamilyGraphData(supabase),
+  ]);
   const debug = familyGraphData.debug;
 
   if (debug?.supabaseErrorMessage || debug?.personsErrorMessage || debug?.relationshipsErrorMessage) {
@@ -35,7 +39,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <FamilyTreeTab data={familyGraphData} />
+      <FamilyTreeTab data={familyGraphData} currentUserProfile={currentUserProfile} />
     </PageContainer>
   );
 }

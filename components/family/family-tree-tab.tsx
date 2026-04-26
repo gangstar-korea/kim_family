@@ -2,19 +2,20 @@ import type { ReactNode } from "react";
 
 import { FamilyRelationshipTree } from "@/components/family/family-relationship-tree";
 import { buildFamilyHierarchyTree } from "@/lib/family/tree-adapter";
-import type { FamilyGraphData } from "@/lib/types";
+import type { FamilyGraphData, UserProfile } from "@/lib/types";
 
 const TEXT = {
-  title: "\uAC00\uC871 \uAD00\uACC4 \uC911\uC2EC \uACC4\uCE35\uB3C4",
+  title: "가족 관계 중심 계층도",
   description:
-    "\uCD5C\uC0C1\uC704 \uAC00\uAD6C\uC5D0\uC11C \uC2DC\uC791\uD574 \uC120\uD0DD\uD55C \uC778\uBB3C\uC758 \uC790\uB140 \uAC00\uC9C0\uB97C \uC624\uB978\uCABD \uCEEC\uB7FC\uC73C\uB85C \uD655\uC7A5\uD558\uB294 \uD0D0\uC0C9\uD615 \uACC4\uCE35\uB3C4\uC785\uB2C8\uB2E4.",
+    "최상위 가구에서 시작해 선택한 인물의 자녀 가지를 오른쪽 컬럼으로 확장하는 탐색형 계층도입니다.",
 };
 
 type FamilyTreeTabProps = {
   data: FamilyGraphData;
+  currentUserProfile?: UserProfile | null;
 };
 
-export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
+export function FamilyTreeTab({ data, currentUserProfile }: FamilyTreeTabProps) {
   const tree = buildFamilyHierarchyTree(data.persons, data.relationships);
 
   return (
@@ -24,6 +25,7 @@ export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
           tree={tree}
           persons={data.persons}
           relationships={data.relationships}
+          currentUserProfile={currentUserProfile ?? null}
         />
       }
     />

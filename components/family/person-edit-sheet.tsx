@@ -13,21 +13,23 @@ import {
   validatePersonFormValues,
 } from "@/lib/family/person-write-adapter";
 import { updatePersonAction } from "@/lib/family/person-write-actions";
-import type { Person } from "@/lib/types";
+import type { Person, UserProfile } from "@/lib/types";
 
 type PersonEditSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   person: Person | null;
+  currentUserProfile?: UserProfile | null;
   onSuccess?: () => void;
 };
 
 const TEXT = {
   title: "가족 정보 수정",
   description:
-    "현재 가족 정보를 바로 수정합니다. 분파, 세대, 내부 코드는 이 단계에서 바꾸지 않습니다.",
+    "현재 가족 정보를 바로 수정합니다. 분파, 세대, 내부 코드는 이번 단계에서 바꾸지 않습니다.",
   cancel: "취소",
   submit: "수정 저장",
+  pending: "저장 중...",
 };
 
 export function PersonEditSheet({
@@ -54,8 +56,6 @@ export function PersonEditSheet({
     return null;
   }
 
-  const currentPerson = person;
-
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -73,7 +73,7 @@ export function PersonEditSheet({
     }
 
     startTransition(async () => {
-      const result = await updatePersonAction(currentPerson.id, values);
+      const result = await updatePersonAction(person.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -92,7 +92,7 @@ export function PersonEditSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${currentPerson.full_name} 정보를 수정합니다. ${TEXT.description}`}
+      description={`${person.full_name} 정보를 수정합니다. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />
@@ -114,7 +114,7 @@ export function PersonEditSheet({
             {TEXT.cancel}
           </Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
-            {isPending ? "저장 중..." : TEXT.submit}
+            {isPending ? TEXT.pending : TEXT.submit}
           </Button>
         </div>
       </form>

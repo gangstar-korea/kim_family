@@ -8,7 +8,8 @@ import { PersonAddSpouseSheet } from "@/components/family/person-add-spouse-shee
 import { PersonEditSheet } from "@/components/family/person-edit-sheet";
 import { Button } from "@/components/ui/button";
 import { formatKoreanMobilePhone } from "@/lib/auth/normalize-phone";
-import type { Person, PersonRelations } from "@/lib/types";
+import type { Person, PersonRelations, UserProfile } from "@/lib/types";
+import type { PersonActionPermissions } from "@/lib/family/permissions";
 
 const TEXT = {
   close: "\uB2EB\uAE30",
@@ -36,6 +37,8 @@ export type PersonDetailSheetProps = {
   onOpenChange: (open: boolean) => void;
   person: Person | null;
   relations?: PersonRelations | null;
+  currentUserProfile?: UserProfile | null;
+  permissions?: PersonActionPermissions | null;
 };
 
 export function PersonDetailSheet({
@@ -43,6 +46,8 @@ export function PersonDetailSheet({
   onOpenChange,
   person,
   relations,
+  currentUserProfile,
+  permissions,
 }: PersonDetailSheetProps) {
   const [activeSheet, setActiveSheet] = useState<"edit" | "child" | "spouse" | null>(null);
 
@@ -60,6 +65,11 @@ export function PersonDetailSheet({
   const spouseExists = Boolean(relations && relations.spouses.length > 0);
   const birthDateDisplay = formatBirthDateDisplay(person);
   const phoneDisplay = person.phone ? formatKoreanMobilePhone(person.phone) : null;
+  const actionPermissions = permissions ?? {
+    canEdit: false,
+    canAddChild: false,
+    canAddSpouse: false,
+  };
 
   function handleMutationSuccess() {
     setActiveSheet(null);
@@ -130,22 +140,28 @@ export function PersonDetailSheet({
 
             <section className="border-t border-border pt-4">
               <div className="grid gap-2 sm:grid-cols-3">
-                <Button type="button" variant="outline" onClick={() => setActiveSheet("edit")}>
-                  {TEXT.edit}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setActiveSheet("child")}>
-                  {TEXT.addChild}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setActiveSheet("spouse")}
-                  disabled={spouseExists}
-                >
-                  {TEXT.addSpouse}
-                </Button>
+                {actionPermissions.canEdit ? (
+                  <Button type="button" variant="outline" onClick={() => setActiveSheet("edit")}>
+                    {TEXT.edit}
+                  </Button>
+                ) : null}
+                {actionPermissions.canAddChild ? (
+                  <Button type="button" variant="outline" onClick={() => setActiveSheet("child")}>
+                    {TEXT.addChild}
+                  </Button>
+                ) : null}
+                {actionPermissions.canAddSpouse ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveSheet("spouse")}
+                    disabled={spouseExists}
+                  >
+                    {TEXT.addSpouse}
+                  </Button>
+                ) : null}
               </div>
-              {spouseExists ? (
+              {actionPermissions.canAddSpouse && spouseExists ? (
                 <p className="mt-2 text-xs text-muted-foreground">{TEXT.spouseExists}</p>
               ) : null}
             </section>
@@ -157,12 +173,14 @@ export function PersonDetailSheet({
         open={activeSheet === "edit"}
         onOpenChange={(nextOpen) => setActiveSheet(nextOpen ? "edit" : null)}
         person={person}
+        currentUserProfile={currentUserProfile ?? null}
         onSuccess={handleMutationSuccess}
       />
       <PersonAddChildSheet
         open={activeSheet === "child"}
         onOpenChange={(nextOpen) => setActiveSheet(nextOpen ? "child" : null)}
         parentPerson={person}
+        currentUserProfile={currentUserProfile ?? null}
         onSuccess={handleMutationSuccess}
       />
       <PersonAddSpouseSheet
@@ -170,6 +188,7 @@ export function PersonDetailSheet({
         onOpenChange={(nextOpen) => setActiveSheet(nextOpen ? "spouse" : null)}
         targetPerson={person}
         spouseExists={spouseExists}
+        currentUserProfile={currentUserProfile ?? null}
         onSuccess={handleMutationSuccess}
       />
     </>

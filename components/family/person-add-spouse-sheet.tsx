@@ -12,22 +12,25 @@ import {
   validatePersonFormValues,
 } from "@/lib/family/person-write-adapter";
 import { addSpouseAction } from "@/lib/family/person-write-actions";
-import type { Person } from "@/lib/types";
+import type { Person, UserProfile } from "@/lib/types";
 
 type PersonAddSpouseSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targetPerson: Person | null;
   spouseExists: boolean;
+  currentUserProfile?: UserProfile | null;
   onSuccess?: () => void;
 };
 
 const TEXT = {
   title: "배우자 추가",
+  description:
+    "선택한 사람과 같은 세대에 배우자를 등록합니다. generation_depth는 현재 사람과 동일하게 저장됩니다.",
   cancel: "취소",
   submit: "배우자 등록",
-  spouseExists:
-    "이미 배우자 관계가 등록되어 있어 이 단계에서는 추가 등록을 잠시 막아 둡니다.",
+  pending: "등록 중...",
+  spouseExists: "이미 배우자 관계가 등록된 가구입니다.",
 };
 
 export function PersonAddSpouseSheet({
@@ -53,8 +56,6 @@ export function PersonAddSpouseSheet({
     return null;
   }
 
-  const currentTargetPerson = targetPerson;
-
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -78,7 +79,7 @@ export function PersonAddSpouseSheet({
     }
 
     startTransition(async () => {
-      const result = await addSpouseAction(currentTargetPerson.id, values);
+      const result = await addSpouseAction(targetPerson.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -97,7 +98,7 @@ export function PersonAddSpouseSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${currentTargetPerson.full_name} 가구에 배우자를 등록합니다. generation_depth는 현재 인물과 동일하게 저장됩니다.`}
+      description={`${targetPerson.full_name} 가구에 배우자를 등록합니다. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />
@@ -118,12 +119,8 @@ export function PersonAddSpouseSheet({
           >
             {TEXT.cancel}
           </Button>
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={isPending || spouseExists}
-          >
-            {isPending ? "등록 중..." : TEXT.submit}
+          <Button type="submit" className="flex-1" disabled={isPending || spouseExists}>
+            {isPending ? TEXT.pending : TEXT.submit}
           </Button>
         </div>
       </form>
