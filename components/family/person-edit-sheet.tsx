@@ -54,6 +54,8 @@ export function PersonEditSheet({
     return null;
   }
 
+  const currentPerson = person;
+
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -71,7 +73,7 @@ export function PersonEditSheet({
     }
 
     startTransition(async () => {
-      const result = await updatePersonAction(person.id, values);
+      const result = await updatePersonAction(currentPerson.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -90,7 +92,7 @@ export function PersonEditSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${person.full_name} \uC815\uBCF4\uB97C \uC218\uC815\uD569\uB2C8\uB2E4. ${TEXT.description}`}
+      description={`${currentPerson.full_name} \uC815\uBCF4\uB97C \uC218\uC815\uD569\uB2C8\uB2E4. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />

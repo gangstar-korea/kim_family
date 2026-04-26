@@ -53,6 +53,8 @@ export function PersonAddSpouseSheet({
     return null;
   }
 
+  const currentTargetPerson = targetPerson;
+
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -76,7 +78,7 @@ export function PersonAddSpouseSheet({
     }
 
     startTransition(async () => {
-      const result = await addSpouseAction(targetPerson.id, values);
+      const result = await addSpouseAction(currentTargetPerson.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -95,7 +97,7 @@ export function PersonAddSpouseSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${targetPerson.full_name} \uAC00\uAD6C\uC5D0 \uBC30\uC6B0\uC790\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uACFC \uB3D9\uC77C\uD558\uAC8C \uC800\uC7A5\uB429\uB2C8\uB2E4.`}
+      description={`${currentTargetPerson.full_name} \uAC00\uAD6C\uC5D0 \uBC30\uC6B0\uC790\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uACFC \uB3D9\uC77C\uD558\uAC8C \uC800\uC7A5\uB429\uB2C8\uB2E4.`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />

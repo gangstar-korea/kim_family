@@ -49,6 +49,8 @@ export function PersonAddChildSheet({
     return null;
   }
 
+  const currentParent = parentPerson;
+
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -68,7 +70,7 @@ export function PersonAddChildSheet({
     }
 
     startTransition(async () => {
-      const result = await addChildAction(parentPerson.id, values);
+      const result = await addChildAction(currentParent.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -87,7 +89,7 @@ export function PersonAddChildSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${parentPerson.full_name} \uC544\uB798 \uC138\uB300\uB85C \uC790\uB140\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uBCF4\uB2E4 1 \uB2E8\uACC4 \uC544\uB798\uB85C \uACC4\uC0B0\uB429\uB2C8\uB2E4.`}
+      description={`${currentParent.full_name} \uC544\uB798 \uC138\uB300\uB85C \uC790\uB140\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uBCF4\uB2E4 1 \uB2E8\uACC4 \uC544\uB798\uB85C \uACC4\uC0B0\uB429\uB2C8\uB2E4.`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} showBirthOrder />
