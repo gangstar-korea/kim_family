@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 
 import { requireSuperAdminProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import type { JoinRequest, PersonWriteActionResult } from "@/lib/types";
+import type { JoinRequest } from "@/lib/types";
 
 const APPROVAL_PATHS = ["/", "/me", "/admin/approvals"];
 
 export async function approveJoinRequestAction(
   joinRequestId: string,
-): Promise<PersonWriteActionResult> {
+): Promise<void> {
   const profile = await requireSuperAdminProfile();
   const supabase = await createClient();
 
@@ -25,7 +25,7 @@ export async function approveJoinRequestAction(
       joinRequestId,
       error: joinRequestError?.message ?? "not found",
     });
-    return { ok: false, message: "승인할 가입 신청을 찾지 못했습니다." };
+    return;
   }
 
   const reviewedAt = new Date().toISOString();
@@ -48,7 +48,7 @@ export async function approveJoinRequestAction(
       details: joinUpdateError.details,
       hint: joinUpdateError.hint,
     });
-    return { ok: false, message: "가입 승인 처리 중 오류가 발생했습니다." };
+    return;
   }
 
   const { error: profileUpdateError } = await supabase
@@ -66,16 +66,15 @@ export async function approveJoinRequestAction(
       details: profileUpdateError.details,
       hint: profileUpdateError.hint,
     });
-    return { ok: false, message: "프로필 승인 상태 저장 중 오류가 발생했습니다." };
+    return;
   }
 
   revalidateApprovalPaths();
-  return { ok: true, message: "가입 신청을 승인했습니다." };
 }
 
 export async function rejectJoinRequestAction(
   joinRequestId: string,
-): Promise<PersonWriteActionResult> {
+): Promise<void> {
   const profile = await requireSuperAdminProfile();
   const supabase = await createClient();
 
@@ -90,7 +89,7 @@ export async function rejectJoinRequestAction(
       joinRequestId,
       error: joinRequestError?.message ?? "not found",
     });
-    return { ok: false, message: "반려할 가입 신청을 찾지 못했습니다." };
+    return;
   }
 
   const reviewedAt = new Date().toISOString();
@@ -113,7 +112,7 @@ export async function rejectJoinRequestAction(
       details: joinUpdateError.details,
       hint: joinUpdateError.hint,
     });
-    return { ok: false, message: "가입 반려 처리 중 오류가 발생했습니다." };
+    return;
   }
 
   const { error: profileUpdateError } = await supabase
@@ -131,11 +130,10 @@ export async function rejectJoinRequestAction(
       details: profileUpdateError.details,
       hint: profileUpdateError.hint,
     });
-    return { ok: false, message: "프로필 반려 상태 저장 중 오류가 발생했습니다." };
+    return;
   }
 
   revalidateApprovalPaths();
-  return { ok: true, message: "가입 신청을 반려했습니다." };
 }
 
 function revalidateApprovalPaths() {
