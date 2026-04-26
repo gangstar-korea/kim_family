@@ -56,6 +56,8 @@ export function PersonAddSpouseSheet({
     return null;
   }
 
+  const currentTargetPerson = targetPerson;
+
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -79,7 +81,7 @@ export function PersonAddSpouseSheet({
     }
 
     startTransition(async () => {
-      const result = await addSpouseAction(targetPerson.id, values);
+      const result = await addSpouseAction(currentTargetPerson.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -98,7 +100,7 @@ export function PersonAddSpouseSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${targetPerson.full_name} 가구에 배우자를 등록합니다. ${TEXT.description}`}
+      description={`${currentTargetPerson.full_name} 가구에 배우자를 등록합니다. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />

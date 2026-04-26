@@ -53,6 +53,8 @@ export function PersonAddChildSheet({
     return null;
   }
 
+  const currentParent = parentPerson;
+
   function handleChange<Key extends keyof typeof values>(field: Key, value: (typeof values)[Key]) {
     setValues((current) => ({
       ...current,
@@ -72,7 +74,7 @@ export function PersonAddChildSheet({
     }
 
     startTransition(async () => {
-      const result = await addChildAction(parentPerson.id, values);
+      const result = await addChildAction(currentParent.id, values);
 
       if (!result.ok) {
         setMessage(result.message);
@@ -91,7 +93,7 @@ export function PersonAddChildSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${parentPerson.full_name} 아래 자녀를 등록합니다. ${TEXT.description}`}
+      description={`${currentParent.full_name} 아래 자녀를 등록합니다. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} showBirthOrder />
