@@ -49,7 +49,7 @@ export async function requireApprovedProfile() {
   const fallbackProfile = approvalState?.profile ?? (await getCurrentUserProfile(supabase));
 
   if (!fallbackProfile) {
-    redirect("/login");
+    redirect("/me");
   }
 
   if (fallbackProfile.role === "super_admin") {
