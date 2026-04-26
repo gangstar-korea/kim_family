@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireSuperAdminProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export async function approveJoinRequestAction(joinRequestId: string): Promise<v
       joinRequestId,
       error: joinRequestError?.message ?? "not found",
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   const reviewedAt = new Date().toISOString();
@@ -46,7 +47,7 @@ export async function approveJoinRequestAction(joinRequestId: string): Promise<v
       details: joinUpdateError.details,
       hint: joinUpdateError.hint,
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   const { error: profileUpdateError } = await supabase
@@ -64,10 +65,11 @@ export async function approveJoinRequestAction(joinRequestId: string): Promise<v
       details: profileUpdateError.details,
       hint: profileUpdateError.hint,
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   revalidateApprovalPaths();
+  redirect("/admin/approvals?result=approved");
 }
 
 export async function rejectJoinRequestAction(joinRequestId: string): Promise<void> {
@@ -85,7 +87,7 @@ export async function rejectJoinRequestAction(joinRequestId: string): Promise<vo
       joinRequestId,
       error: joinRequestError?.message ?? "not found",
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   const reviewedAt = new Date().toISOString();
@@ -108,7 +110,7 @@ export async function rejectJoinRequestAction(joinRequestId: string): Promise<vo
       details: joinUpdateError.details,
       hint: joinUpdateError.hint,
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   const { error: profileUpdateError } = await supabase
@@ -126,10 +128,11 @@ export async function rejectJoinRequestAction(joinRequestId: string): Promise<vo
       details: profileUpdateError.details,
       hint: profileUpdateError.hint,
     });
-    return;
+    redirect("/admin/approvals?result=error");
   }
 
   revalidateApprovalPaths();
+  redirect("/admin/approvals?result=rejected");
 }
 
 function revalidateApprovalPaths() {

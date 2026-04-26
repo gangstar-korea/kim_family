@@ -1,22 +1,46 @@
+import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
 import { approveJoinRequestAction, rejectJoinRequestAction } from "@/lib/auth/approval-actions";
 import { requireSuperAdminProfile } from "@/lib/auth/guards";
-import { getAllJoinRequests } from "@/lib/supabase/queries";
+import { getApprovalAdminItems } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
-import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 const TEXT = {
-  title: "회원 가입 승인",
-  description: "가입 신청 목록을 확인하고 승인 또는 반려할 수 있습니다.",
+  title: "회원 승인 관리",
+  description: "가입한 사용자의 승인 상태를 확인하고 승인 또는 반려할 수 있습니다.",
   empty: "표시할 가입 신청이 없습니다.",
+  emailGuide: "현재 데이터 구조상 이메일 대신 계정 ID와 연락처를 함께 표시합니다.",
+  accountId: "계정 ID",
+  name: "이름",
+  phone: "연락처",
+  branch: "1대 가족",
+  familyRole: "가족 구분",
+  joinedAt: "가입 일시",
+  personLink: "person 연결",
+  role: "권한",
+  approve: "승인",
+  reject: "반려",
+  approvedFeedback: "승인되었습니다.",
+  rejectedFeedback: "반려되었습니다.",
+  failedFeedback: "처리에 실패했습니다.",
 };
 
-export default async function AdminApprovalsPage() {
+type AdminApprovalsPageProps = {
+  searchParams: Promise<{
+    result?: string;
+  }>;
+};
+
+export default async function AdminApprovalsPage({
+  searchParams,
+}: AdminApprovalsPageProps) {
   await requireSuperAdminProfile();
   const supabase = await createClient();
-  const joinRequests = await getAllJoinRequests(supabase);
+  const approvalItems = await getApprovalAdminItems(supabase);
+  const resolvedSearchParams = await searchParams;
+  const feedback = getFeedbackMessage(resolvedSearchParams.result);
 
   return (
     <PageContainer className="space-y-4">
@@ -25,42 +49,73 @@ export default async function AdminApprovalsPage() {
           <CardTitle>{TEXT.title}</CardTitle>
           <CardDescription>{TEXT.description}</CardDescription>
         </CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          <p className="text-sm text-muted-foreground">{TEXT.emailGuide}</p>
+          {feedback ? (
+            <div
+              className={
+                feedback.tone === "success"
+                  ? "rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary"
+                  : "rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              }
+            >
+              {feedback.message}
+            </div>
+          ) : null}
+        </CardContent>
       </Card>
 
-      {joinRequests.length === 0 ? (
+      {approvalItems.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">{TEXT.empty}</CardContent>
         </Card>
       ) : (
-        joinRequests.map((request) => (
-          <Card key={request.id}>
+        approvalItems.map((item) => (
+          <Card key={item.joinRequest.id}>
             <CardHeader className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg">{request.display_name}</CardTitle>
-                  <CardDescription>{request.phone}</CardDescription>
+                  <CardTitle className="text-lg">
+                    {item.profile?.display_name ?? item.joinRequest.display_name}
+                  </CardTitle>
+                  <CardDescription>{item.joinRequest.user_id}</CardDescription>
                 </div>
-                <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                  {formatStatus(request.status)}
-                </span>
+                <StatusBadge status={item.effectiveStatus} />
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="grid gap-2 text-muted-foreground sm:grid-cols-2">
-                <p>1대 가족: {formatBranchCode(request.branch_code)}</p>
-                <p>가족 구분: {formatFamilyRole(request.family_role_type)}</p>
-                <p>가입 일시: {request.created_at}</p>
-                <p>person 연결: {request.person_id ?? "-"}</p>
+
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <InfoItem label={TEXT.accountId} value={item.joinRequest.user_id} />
+                <InfoItem
+                  label={TEXT.name}
+                  value={item.profile?.display_name ?? item.joinRequest.display_name}
+                />
+                <InfoItem
+                  label={TEXT.phone}
+                  value={item.profile?.phone ?? item.joinRequest.phone}
+                />
+                <InfoItem
+                  label={TEXT.branch}
+                  value={formatBranchCode(item.joinRequest.branch_code)}
+                />
+                <InfoItem
+                  label={TEXT.familyRole}
+                  value={formatFamilyRole(item.joinRequest.family_role_type)}
+                />
+                <InfoItem label={TEXT.joinedAt} value={formatDateTime(item.joinRequest.created_at)} />
+                <InfoItem label={TEXT.personLink} value={item.personId ?? "-"} />
+                <InfoItem label={TEXT.role} value={formatRole(item.role)} />
               </div>
 
-              {request.status === "pending" ? (
+              {item.effectiveStatus === "pending" ? (
                 <div className="flex gap-2">
-                  <form action={approveJoinRequestAction.bind(null, request.id)}>
-                    <Button type="submit">승인</Button>
+                  <form action={approveJoinRequestAction.bind(null, item.joinRequest.id)}>
+                    <Button type="submit">{TEXT.approve}</Button>
                   </form>
-                  <form action={rejectJoinRequestAction.bind(null, request.id)}>
+                  <form action={rejectJoinRequestAction.bind(null, item.joinRequest.id)}>
                     <Button type="submit" variant="outline">
-                      반려
+                      {TEXT.reject}
                     </Button>
                   </form>
                 </div>
@@ -73,16 +128,20 @@ export default async function AdminApprovalsPage() {
   );
 }
 
-function formatStatus(status: "pending" | "approved" | "rejected") {
-  if (status === "approved") {
-    return "승인 완료";
+function getFeedbackMessage(result: string | undefined) {
+  if (result === "approved") {
+    return { tone: "success" as const, message: TEXT.approvedFeedback };
   }
 
-  if (status === "rejected") {
-    return "반려";
+  if (result === "rejected") {
+    return { tone: "success" as const, message: TEXT.rejectedFeedback };
   }
 
-  return "승인 대기";
+  if (result === "error") {
+    return { tone: "error" as const, message: TEXT.failedFeedback };
+  }
+
+  return null;
 }
 
 function formatBranchCode(branchCode: string) {
@@ -93,5 +152,61 @@ function formatFamilyRole(familyRoleType: string) {
   return (
     FAMILY_ROLE_OPTIONS.find((option) => option.value === familyRoleType)?.label ??
     familyRoleType
+  );
+}
+
+function formatRole(role: string | null) {
+  return role ?? "-";
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: "pending" | "approved" | "rejected";
+}) {
+  const label =
+    status === "approved" ? "승인 완료" : status === "rejected" ? "반려" : "승인 대기";
+  const className =
+    status === "approved"
+      ? "bg-primary/10 text-primary"
+      : status === "rejected"
+        ? "bg-destructive/10 text-destructive"
+        : "bg-muted text-muted-foreground";
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function InfoItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="space-y-1 rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p className="break-all text-sm font-medium text-foreground">{value}</p>
+    </div>
   );
 }

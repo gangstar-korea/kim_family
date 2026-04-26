@@ -1,4 +1,5 @@
 import type {
+  AppRole,
   BranchCode,
   CurrentApprovalState,
   EditRequest,
@@ -12,6 +13,14 @@ import type {
 import type { createClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+export type ApprovalAdminItem = {
+  joinRequest: JoinRequest;
+  profile: Pick<UserProfile, "id" | "role" | "status" | "person_id" | "display_name" | "phone"> | null;
+  effectiveStatus: "pending" | "approved" | "rejected";
+  role: AppRole | null;
+  personId: string | null;
+};
 
 export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
   const {
@@ -270,6 +279,40 @@ export async function getAllJoinRequests(supabase: SupabaseServerClient) {
   return data;
 }
 
+export async function getApprovalAdminItems(
+  supabase: SupabaseServerClient,
+): Promise<ApprovalAdminItem[]> {
+  const [joinRequests, userProfiles] = await Promise.all([
+    getAllJoinRequests(supabase),
+    getApprovalProfiles(supabase),
+  ]);
+
+  const profileById = new Map(userProfiles.map((profile) => [profile.id, profile]));
+
+  return joinRequests
+    .map((joinRequest) => {
+      const profile = profileById.get(joinRequest.user_id) ?? null;
+
+      return {
+        joinRequest,
+        profile,
+        effectiveStatus: profile?.status ?? joinRequest.status,
+        role: profile?.role ?? null,
+        personId: profile?.person_id ?? joinRequest.person_id ?? null,
+      };
+    })
+    .sort((left, right) => {
+      const rankDiff =
+        getStatusSortRank(left.effectiveStatus) - getStatusSortRank(right.effectiveStatus);
+
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
+
+      return left.joinRequest.created_at < right.joinRequest.created_at ? 1 : -1;
+    });
+}
+
 export async function getPendingEditRequests(supabase: SupabaseServerClient) {
   const { data, error } = await supabase
     .from("edit_requests")
@@ -283,4 +326,33 @@ export async function getPendingEditRequests(supabase: SupabaseServerClient) {
   }
 
   return data;
+}
+
+async function getApprovalProfiles(supabase: SupabaseServerClient) {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("id, role, status, person_id, display_name, phone")
+    .returns<
+      Array<
+        Pick<UserProfile, "id" | "role" | "status" | "person_id" | "display_name" | "phone">
+      >
+    >();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+function getStatusSortRank(status: "pending" | "approved" | "rejected") {
+  if (status === "pending") {
+    return 0;
+  }
+
+  if (status === "approved") {
+    return 1;
+  }
+
+  return 2;
 }

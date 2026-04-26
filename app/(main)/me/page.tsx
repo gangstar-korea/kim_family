@@ -1,7 +1,6 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireAuthenticatedUser } from "@/lib/auth/guards";
-import { resolveCurrentAccessContext } from "@/lib/auth/guards";
+import { requireAuthenticatedUser, resolveCurrentAccessContext } from "@/lib/auth/guards";
 
 const TEXT = {
   missingProfileTitle: "로그인 계정 확인이 필요합니다.",
@@ -12,6 +11,8 @@ const TEXT = {
   rejectedDescription: "필요 시 관리자에게 문의해 주세요.",
   approvedTitle: "내 정보",
   approvedDescription: "로그인 사용자와 연결된 가족 프로필을 확인하는 영역입니다.",
+  unknownStatusTitle: "승인 상태 확인이 필요합니다.",
+  unknownStatusDescription: "현재 계정의 승인 상태 값을 확인하지 못했습니다.",
 };
 
 export default async function MePage() {
@@ -56,11 +57,11 @@ export default async function MePage() {
       <PageContainer>
         <Card>
           <CardHeader>
-            <CardTitle>승인 상태 확인이 필요합니다.</CardTitle>
-            <CardDescription>현재 계정의 승인 상태 값을 확인하지 못했습니다.</CardDescription>
+            <CardTitle>{TEXT.unknownStatusTitle}</CardTitle>
+            <CardDescription>{TEXT.unknownStatusDescription}</CardDescription>
           </CardHeader>
           <CardContent className="text-sm leading-6 text-muted-foreground">
-            role과 status 값이 비어 있거나 예상과 다를 수 있습니다. 관리자에게 user_profiles 상태를 확인해 주세요.
+            role 또는 status 값이 비어 있거나 예상과 다를 수 있습니다. 관리자에게 user_profiles 상태를 확인해 주세요.
           </CardContent>
         </Card>
       </PageContainer>
