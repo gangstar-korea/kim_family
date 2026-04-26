@@ -141,3 +141,22 @@ export type PersonRelations = {
 };
 
 export type PersonRelationsById = Record<string, PersonRelations>;
+
+export type PersonFormValues = {
+  full_name: string;
+  gender: Person["gender"] | "";
+  birth_date: string;
+  is_alive: boolean;
+  deceased_date: string;
+  phone: string;
+  address: string;
+  memo: string;
+  region: string;
+  birth_order: string;
+};
+
+export type PersonWriteActionResult = {
+  ok: boolean;
+  message: string;
+  personId?: EntityId;
+};
