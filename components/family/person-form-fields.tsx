@@ -7,13 +7,6 @@ import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { PersonFormValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -97,72 +90,72 @@ export function PersonFormFields({
       />
 
       <div className="space-y-4">
-        <FormField label="이름" required htmlFor="full_name">
-          <Input
-            id="full_name"
+      <FormField label="이름" required htmlFor="full_name">
+        <Input
+          id="full_name"
             value={values.full_name}
             onChange={(event) => onChange("full_name", event.target.value)}
             placeholder="이름을 입력해 주세요"
           />
+      </FormField>
+
+      <div className="grid gap-4 md:grid-cols-[minmax(0,7.5rem)_minmax(0,8.5rem)_minmax(0,1fr)]">
+        <FormField label="성별" htmlFor="gender">
+          <select
+            id="gender"
+            value={values.gender || "__empty__"}
+            onChange={(event) =>
+              onChange(
+                "gender",
+                event.target.value === "__empty__"
+                  ? ""
+                  : (event.target.value as PersonFormValues["gender"]),
+              )
+            }
+            className={cn(
+              "flex h-12 w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            {GENDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </FormField>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <FormField label="성별" htmlFor="gender">
-            <Select
-              value={values.gender || "__empty__"}
-              onValueChange={(value) =>
-                onChange(
-                  "gender",
-                  value === "__empty__" ? "" : (value as PersonFormValues["gender"]),
-                )
-              }
-            >
-              <SelectTrigger id="gender">
-                <SelectValue placeholder="성별 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {GENDER_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
+        <FormField label="달력 구분" htmlFor="birth_calendar_type">
+          <select
+            id="birth_calendar_type"
+            value={values.birth_calendar_type}
+            onChange={(event) =>
+              onChange(
+                "birth_calendar_type",
+                event.target.value as PersonFormValues["birth_calendar_type"],
+              )
+            }
+            className={cn(
+              "flex h-12 w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            {CALENDAR_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
 
-          <FormField label="달력 구분" htmlFor="birth_calendar_type">
-            <Select
-              value={values.birth_calendar_type}
-              onValueChange={(value) =>
-                onChange(
-                  "birth_calendar_type",
-                  value as PersonFormValues["birth_calendar_type"],
-                )
-              }
-            >
-              <SelectTrigger id="birth_calendar_type">
-                <SelectValue placeholder="달력 구분 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {CALENDAR_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label="생년월일" htmlFor="birth_year">
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                id="birth_year"
-                inputMode="numeric"
-                maxLength={4}
-                value={values.birth_year}
-                onChange={(event) => onChange("birth_year", event.target.value)}
-                placeholder="연도"
-              />
+        <FormField label="생년월일" htmlFor="birth_year">
+          <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-2">
+            <Input
+              id="birth_year"
+              inputMode="numeric"
+              maxLength={4}
+              value={values.birth_year}
+              onChange={(event) => onChange("birth_year", event.target.value)}
+              placeholder="연도"
+            />
               <Input
                 inputMode="numeric"
                 maxLength={2}
