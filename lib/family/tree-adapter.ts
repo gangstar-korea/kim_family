@@ -353,7 +353,7 @@ export function countFamilyTreeNodes(tree: FamilyTree) {
 export function buildFamilyHierarchyTree(
   persons: Person[],
   relationships: Relationship[],
-  maxDepth = 3,
+  maxDepth = Number.POSITIVE_INFINITY,
 ): FamilyHierarchyTree {
   const generationTree = buildFamilyTree(persons, relationships);
   const units = generationTree.generations.flatMap((generation) => generation.units);
@@ -428,7 +428,7 @@ export function buildFamilyHierarchyTree(
     depth: number,
     visiting = new Set<string>(),
   ): FamilyHierarchyNode {
-    if (depth >= maxDepth || visiting.has(unit.primary.id)) {
+    if ((Number.isFinite(maxDepth) && depth >= maxDepth) || visiting.has(unit.primary.id)) {
       return {
         unit,
         children: [],

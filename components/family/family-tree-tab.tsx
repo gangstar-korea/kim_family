@@ -15,7 +15,7 @@ type FamilyTreeTabProps = {
 };
 
 export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
-  const tree = buildFamilyHierarchyTree(data.persons, data.relationships, 3);
+  const tree = buildFamilyHierarchyTree(data.persons, data.relationships);
 
   return (
     <FamilyTreeStage
