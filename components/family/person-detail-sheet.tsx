@@ -7,6 +7,7 @@ import { PersonAddChildSheet } from "@/components/family/person-add-child-sheet"
 import { PersonAddSpouseSheet } from "@/components/family/person-add-spouse-sheet";
 import { PersonEditSheet } from "@/components/family/person-edit-sheet";
 import { Button } from "@/components/ui/button";
+import { formatKoreanMobilePhone } from "@/lib/auth/normalize-phone";
 import type { Person, PersonRelations } from "@/lib/types";
 
 const TEXT = {
@@ -20,6 +21,9 @@ const TEXT = {
   memo: "\uBA54\uBAA8",
   bornSuffix: "\uCD9C\uC0DD",
   deceasedSuffix: "\uBCC4\uC138",
+  solar: "\uC591\uB825",
+  lunar: "\uC74C\uB825",
+  leapMonth: "\uC724\uB2EC",
   edit: "\uC218\uC815",
   addChild: "\uC790\uB140 \uCD94\uAC00",
   addSpouse: "\uBC30\uC6B0\uC790 \uCD94\uAC00",
@@ -54,6 +58,8 @@ export function PersonDetailSheet({
 
   const summaryText = buildSummaryText(person);
   const spouseExists = Boolean(relations && relations.spouses.length > 0);
+  const birthDateDisplay = formatBirthDateDisplay(person);
+  const phoneDisplay = person.phone ? formatKoreanMobilePhone(person.phone) : null;
 
   function handleMutationSuccess() {
     setActiveSheet(null);
@@ -99,14 +105,14 @@ export function PersonDetailSheet({
 
           <div className="space-y-5">
             <section className="space-y-3">
-              <DetailListItem label={TEXT.birthDate} value={person.birth_date} />
+              <DetailListItem label={TEXT.birthDate} value={birthDateDisplay} />
               {!person.is_alive ? (
                 <DetailListItem label={TEXT.deceasedDate} value={person.deceased_date} />
               ) : null}
             </section>
 
             <section className="space-y-3 border-t border-border pt-4">
-              <DetailListItem label={TEXT.phone} value={person.phone} />
+              <DetailListItem label={TEXT.phone} value={phoneDisplay} />
             </section>
 
             <section className="space-y-3 border-t border-border pt-4">
@@ -171,15 +177,36 @@ export function PersonDetailSheet({
 }
 
 function buildSummaryText(person: Person) {
-  const birthText = person.birth_date
-    ? `${person.birth_date} ${TEXT.bornSuffix}`
-    : TEXT.noValue;
+  const birthDateDisplay = formatBirthDateDisplay(person);
+  const birthText =
+    birthDateDisplay === TEXT.noValue
+      ? TEXT.noValue
+      : `${birthDateDisplay} ${TEXT.bornSuffix}`;
 
   if (!person.is_alive && person.deceased_date) {
     return `${birthText} \u00B7 ${person.deceased_date} ${TEXT.deceasedSuffix}`;
   }
 
   return birthText;
+}
+
+function formatBirthDateDisplay(person: Person) {
+  const birthDate =
+    person.birth_calendar_type === "lunar"
+      ? person.birth_date_lunar ?? person.birth_date
+      : person.birth_date_solar ?? person.birth_date;
+
+  if (!birthDate) {
+    return TEXT.noValue;
+  }
+
+  if (person.birth_calendar_type === "lunar") {
+    return person.is_lunar_leap_month
+      ? `${birthDate} (${TEXT.lunar}, ${TEXT.leapMonth})`
+      : `${birthDate} (${TEXT.lunar})`;
+  }
+
+  return `${birthDate} (${TEXT.solar})`;
 }
 
 function DetailListItem({
