@@ -46,16 +46,21 @@ export function hasRole(profile: UserProfile, roles: AppRole[]) {
 export async function requireApprovedProfile() {
   const supabase = await createClient();
   const approvalState = await getCurrentApprovalState(supabase);
+  const fallbackProfile = approvalState?.profile ?? (await getCurrentUserProfile(supabase));
 
-  if (!approvalState?.profile) {
+  if (!fallbackProfile) {
     redirect("/login");
   }
 
-  if (approvalState.status !== "approved" || approvalState.profile.status !== "approved") {
+  if (fallbackProfile.role === "super_admin") {
+    return fallbackProfile;
+  }
+
+  if (approvalState?.status !== "approved" || fallbackProfile.status !== "approved") {
     redirect("/me");
   }
 
-  return approvalState.profile;
+  return fallbackProfile;
 }
 
 export async function requireSuperAdminProfile() {

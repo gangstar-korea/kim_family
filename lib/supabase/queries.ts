@@ -30,7 +30,13 @@ export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
     .maybeSingle<UserProfile>();
 
   if (error) {
-    throw error;
+    console.error("[approval] current user profile lookup failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
   }
 
   return data;
