@@ -33,7 +33,7 @@ export function SignupForm() {
           id="displayName"
           name="displayName"
           autoComplete="name"
-          placeholder="김가족"
+          placeholder="이름 입력"
           required
         />
       </div>
@@ -53,10 +53,10 @@ export function SignupForm() {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="branchCode">지파</Label>
+          <Label htmlFor="branchCode">1대 가족</Label>
           <Select name="branchCode" required>
             <SelectTrigger id="branchCode">
-              <SelectValue placeholder="지파 선택" />
+              <SelectValue placeholder="가족 선택" />
             </SelectTrigger>
             <SelectContent>
               {BRANCH_OPTIONS.map((option) => (
@@ -92,7 +92,7 @@ export function SignupForm() {
           name="password"
           type="password"
           autoComplete="new-password"
-          placeholder="8자 이상"
+          placeholder="8자 이상 입력"
           minLength={8}
           required
         />
@@ -105,7 +105,7 @@ export function SignupForm() {
           name="passwordConfirm"
           type="password"
           autoComplete="new-password"
-          placeholder="비밀번호를 한 번 더 입력"
+          placeholder="비밀번호를 다시 입력"
           minLength={8}
           required
         />
@@ -130,7 +130,7 @@ export function SignupForm() {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        이미 계정이 있으신가요?{" "}
+        이미 계정이 있나요?{" "}
         <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
           로그인
         </Link>
