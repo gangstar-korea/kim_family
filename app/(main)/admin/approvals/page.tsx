@@ -1,5 +1,10 @@
 import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
-import { approveJoinRequestAction, rejectJoinRequestAction } from "@/lib/auth/approval-actions";
+import {
+  approveJoinRequestAction,
+  approveUserProfileAction,
+  rejectJoinRequestAction,
+  rejectUserProfileAction,
+} from "@/lib/auth/approval-actions";
 import { requireSuperAdminProfile } from "@/lib/auth/guards";
 import { getApprovalAdminItems } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -11,8 +16,6 @@ const TEXT = {
   title: "회원 승인 관리",
   description: "가입한 사용자의 승인 상태를 확인하고 승인 또는 반려할 수 있습니다.",
   empty: "표시할 가입 신청이 없습니다.",
-  accountGuide: "현재 구조에서는 계정 ID와 신청 정보를 함께 표시합니다.",
-  accountId: "계정 ID",
   name: "이름",
   phone: "연락처",
   branch: "1대 가족",
@@ -25,7 +28,8 @@ const TEXT = {
   approvedFeedback: "승인되었습니다.",
   rejectedFeedback: "반려되었습니다.",
   failedFeedback: "처리에 실패했습니다.",
-  missingJoinRequest: "가입 신청 기록이 없어 이 화면에서는 바로 처리할 수 없습니다.",
+  missingJoinRequest:
+    "가입 신청 기록이 누락된 상태입니다. 현재 계정 기준으로 바로 처리할 수 있습니다.",
 };
 
 type AdminApprovalsPageProps = {
@@ -51,9 +55,8 @@ export default async function AdminApprovalsPage({
           <CardTitle>{TEXT.title}</CardTitle>
           <CardDescription>{TEXT.description}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          <p className="text-sm text-muted-foreground">{TEXT.accountGuide}</p>
-          {feedback ? (
+        {feedback ? (
+          <CardContent className="pt-0">
             <div
               className={
                 feedback.tone === "success"
@@ -63,8 +66,8 @@ export default async function AdminApprovalsPage({
             >
               {feedback.message}
             </div>
-          ) : null}
-        </CardContent>
+          </CardContent>
+        ) : null}
       </Card>
 
       {approvalItems.length === 0 ? (
@@ -78,7 +81,9 @@ export default async function AdminApprovalsPage({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle className="text-lg">{item.displayName}</CardTitle>
-                  <CardDescription>{item.accountId}</CardDescription>
+                  <CardDescription>
+                    {formatBranchCode(item.branchCode)} / {formatFamilyRole(item.familyRoleType)}
+                  </CardDescription>
                 </div>
                 <StatusBadge status={item.effectiveStatus} />
               </div>
@@ -86,7 +91,6 @@ export default async function AdminApprovalsPage({
 
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <InfoItem label={TEXT.accountId} value={item.accountId} />
                 <InfoItem label={TEXT.name} value={item.displayName} />
                 <InfoItem label={TEXT.phone} value={item.phone} />
                 <InfoItem label={TEXT.branch} value={formatBranchCode(item.branchCode)} />
@@ -108,7 +112,19 @@ export default async function AdminApprovalsPage({
                   </form>
                 </div>
               ) : item.effectiveStatus === "pending" ? (
-                <p className="text-sm text-muted-foreground">{TEXT.missingJoinRequest}</p>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{TEXT.missingJoinRequest}</p>
+                  <div className="flex gap-2">
+                    <form action={approveUserProfileAction.bind(null, item.accountId)}>
+                      <Button type="submit">{TEXT.approve}</Button>
+                    </form>
+                    <form action={rejectUserProfileAction.bind(null, item.accountId)}>
+                      <Button type="submit" variant="outline">
+                        {TEXT.reject}
+                      </Button>
+                    </form>
+                  </div>
+                </div>
               ) : null}
             </CardContent>
           </Card>
