@@ -8,9 +8,7 @@ import type { JoinRequest } from "@/lib/types";
 
 const APPROVAL_PATHS = ["/", "/me", "/admin/approvals"];
 
-export async function approveJoinRequestAction(
-  joinRequestId: string,
-): Promise<void> {
+export async function approveJoinRequestAction(joinRequestId: string): Promise<void> {
   const profile = await requireSuperAdminProfile();
   const supabase = await createClient();
 
@@ -34,7 +32,7 @@ export async function approveJoinRequestAction(
     .from("join_requests")
     .update({
       status: "approved",
-      reviewed_by: profile.user_id,
+      reviewed_by: profile.id,
       reviewed_at: reviewedAt,
       rejection_reason: null,
     })
@@ -56,7 +54,7 @@ export async function approveJoinRequestAction(
     .update({
       status: "approved",
     })
-    .eq("user_id", joinRequest.user_id);
+    .eq("id", joinRequest.user_id);
 
   if (profileUpdateError) {
     console.error("[approval] user profile approve failed", {
@@ -72,9 +70,7 @@ export async function approveJoinRequestAction(
   revalidateApprovalPaths();
 }
 
-export async function rejectJoinRequestAction(
-  joinRequestId: string,
-): Promise<void> {
+export async function rejectJoinRequestAction(joinRequestId: string): Promise<void> {
   const profile = await requireSuperAdminProfile();
   const supabase = await createClient();
 
@@ -98,7 +94,7 @@ export async function rejectJoinRequestAction(
     .from("join_requests")
     .update({
       status: "rejected",
-      reviewed_by: profile.user_id,
+      reviewed_by: profile.id,
       reviewed_at: reviewedAt,
       rejection_reason: "관리자 검토 후 반려",
     })
@@ -120,7 +116,7 @@ export async function rejectJoinRequestAction(
     .update({
       status: "rejected",
     })
-    .eq("user_id", joinRequest.user_id);
+    .eq("id", joinRequest.user_id);
 
   if (profileUpdateError) {
     console.error("[approval] user profile reject failed", {

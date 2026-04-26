@@ -26,7 +26,7 @@ export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
   const { data, error } = await supabase
     .from("user_profiles")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .maybeSingle<UserProfile>();
 
   if (error) {

@@ -65,7 +65,6 @@ export interface Relationship {
 
 export interface UserProfile {
   id: EntityId;
-  user_id: EntityId;
   person_id: EntityId | null;
   phone: string;
   display_name: string;
