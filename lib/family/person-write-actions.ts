@@ -19,6 +19,15 @@ import type {
 
 const PATHS_TO_REVALIDATE = ["/"];
 
+type WriteErrorShape = {
+  code?: string | null;
+  message: string;
+  details?: string | null;
+  hint?: string | null;
+};
+
+type PersonInsertDraft = Omit<Person, "id">;
+
 export async function updatePersonAction(
   personId: string,
   values: PersonFormValues,
@@ -26,10 +35,7 @@ export async function updatePersonAction(
   const validationMessage = validatePersonFormValues(values);
 
   if (validationMessage) {
-    return {
-      ok: false,
-      message: validationMessage,
-    };
+    return { ok: false, message: validationMessage };
   }
 
   const supabase = await createClient();
@@ -38,10 +44,7 @@ export async function updatePersonAction(
 
   if (authResult.error || !user) {
     console.error("[person write] update auth failed", authResult.error?.message ?? "no user");
-    return {
-      ok: false,
-      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
-    };
+    return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
   const { data: existingPerson, error: personError } = await supabase
@@ -55,17 +58,11 @@ export async function updatePersonAction(
       personId,
       error: personError?.message ?? "person not found",
     });
-    return {
-      ok: false,
-      message: "수정할 가족 정보를 찾지 못했습니다.",
-    };
+    return { ok: false, message: "수정할 가족 정보를 찾지 못했습니다." };
   }
 
   const payload = buildPersonUpdatePayload(existingPerson, values, user.id);
-  console.info("[person write] update payload", {
-    personId,
-    payload,
-  });
+  console.info("[person write] update payload", { personId, payload });
 
   const { error } = await supabase.from("persons").update(payload).eq("id", personId);
 
@@ -103,10 +100,7 @@ export async function addChildAction(
   });
 
   if (validationMessage) {
-    return {
-      ok: false,
-      message: validationMessage,
-    };
+    return { ok: false, message: validationMessage };
   }
 
   const supabase = await createClient();
@@ -115,10 +109,7 @@ export async function addChildAction(
 
   if (authResult.error || !user) {
     console.error("[person write] child auth failed", authResult.error?.message ?? "no user");
-    return {
-      ok: false,
-      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
-    };
+    return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
   const { data: parentPerson, error: parentError } = await supabase
@@ -132,10 +123,7 @@ export async function addChildAction(
       parentId,
       error: parentError?.message ?? "parent not found",
     });
-    return {
-      ok: false,
-      message: "기준 부모 정보를 찾지 못했습니다.",
-    };
+    return { ok: false, message: "기준 부모 정보를 찾지 못했습니다." };
   }
 
   const { data: existingPersons, error: existingPersonsError } = await supabase
@@ -158,7 +146,7 @@ export async function addChildAction(
     };
   }
 
-  let personDraft;
+  let personDraft: PersonInsertDraft;
 
   try {
     personDraft = buildChildDraft({
@@ -284,10 +272,7 @@ export async function addSpouseAction(
   const validationMessage = validatePersonFormValues(values);
 
   if (validationMessage) {
-    return {
-      ok: false,
-      message: validationMessage,
-    };
+    return { ok: false, message: validationMessage };
   }
 
   const supabase = await createClient();
@@ -296,10 +281,7 @@ export async function addSpouseAction(
 
   if (authResult.error || !user) {
     console.error("[person write] spouse auth failed", authResult.error?.message ?? "no user");
-    return {
-      ok: false,
-      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
-    };
+    return { ok: false, message: "로그인 상태를 확인한 뒤 다시 시도해 주세요." };
   }
 
   const { data: targetPerson, error: targetPersonError } = await supabase
@@ -313,10 +295,7 @@ export async function addSpouseAction(
       targetPersonId,
       error: targetPersonError?.message ?? "target not found",
     });
-    return {
-      ok: false,
-      message: "기준 배우자 대상 정보를 찾지 못했습니다.",
-    };
+    return { ok: false, message: "기준 배우자 대상 정보를 찾지 못했습니다." };
   }
 
   const { data: existingPersons, error: existingPersonsError } = await supabase
@@ -337,7 +316,7 @@ export async function addSpouseAction(
     return {
       ok: false,
       message:
-        buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError) ??
+        buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError) ||
         buildWriteFailureMessage("관계 데이터 조회", existingRelationshipsError),
     };
   }
@@ -349,7 +328,7 @@ export async function addSpouseAction(
     };
   }
 
-  let personDraft;
+  let personDraft: PersonInsertDraft;
 
   try {
     personDraft = buildSpouseDraft({
@@ -497,8 +476,6 @@ function revalidateFamilyPaths() {
   });
 }
 
-type PersonInsertDraft = Omit<Person, "id">;
-
 async function insertBloodPersonWithRetries(
   supabase: Awaited<ReturnType<typeof createClient>>,
   initialDraft: PersonInsertDraft,
@@ -530,7 +507,7 @@ async function insertBloodPersonWithRetries(
 
       return {
         data: result.data,
-        error: null,
+        error: null as WriteErrorShape | null,
         draft: currentDraft,
       };
     }
@@ -538,7 +515,7 @@ async function insertBloodPersonWithRetries(
     if (!isDuplicateInternalCodeError(result.error)) {
       return {
         data: result.data ?? null,
-        error: result.error,
+        error: result.error as WriteErrorShape | null,
         draft: currentDraft,
       };
     }
@@ -559,26 +536,16 @@ async function insertBloodPersonWithRetries(
   return {
     data: null,
     error: {
+      code: null,
       message: "internal_code 재시도 한도를 초과했습니다.",
       details: currentDraft.internal_code,
       hint: "persons_internal_code_key",
-    },
+    } satisfies WriteErrorShape,
     draft: currentDraft,
   };
 }
 
-function buildWriteFailureMessage(
-  stage: string,
-  error:
-    | {
-        code?: string | null;
-        message: string;
-        details?: string | null;
-        hint?: string | null;
-      }
-    | null
-    | undefined,
-) {
+function buildWriteFailureMessage(stage: string, error: WriteErrorShape | null | undefined) {
   if (!error) {
     return `${stage} 중 알 수 없는 오류가 발생했습니다.`;
   }
@@ -587,17 +554,7 @@ function buildWriteFailureMessage(
   return `${stage} 실패: ${reason}`;
 }
 
-function serializeSupabaseError(
-  error:
-    | {
-        code?: string | null;
-        message: string;
-        details?: string | null;
-        hint?: string | null;
-      }
-    | null
-    | undefined,
-) {
+function serializeSupabaseError(error: WriteErrorShape | null | undefined) {
   if (!error) {
     return null;
   }
@@ -610,17 +567,7 @@ function serializeSupabaseError(
   };
 }
 
-function isDuplicateInternalCodeError(
-  error:
-    | {
-        code?: string | null;
-        message: string;
-        details?: string | null;
-        hint?: string | null;
-      }
-    | null
-    | undefined,
-) {
+function isDuplicateInternalCodeError(error: WriteErrorShape | null | undefined) {
   if (!error) {
     return false;
   }
