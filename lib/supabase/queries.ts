@@ -33,13 +33,13 @@ export type ApprovalAdminItem = {
   displayName: string;
   phone: string;
   branchCode: BranchCode | null;
-  familyRoleType: UserProfile["family_role_type"] | JoinRequest["family_role_type"] | null;
+  familyRoleType: "blood" | "spouse" | null;
   createdAt: string;
 };
 
 type JoinRequestPayload = {
   branch_code?: BranchCode | null;
-  family_role_type?: UserProfile["family_role_type"] | null;
+  family_role_type?: "blood" | "spouse" | null;
   person_id?: string | null;
 };
 
