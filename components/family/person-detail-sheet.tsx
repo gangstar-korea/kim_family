@@ -29,7 +29,6 @@ export function PersonDetailSheet({
   open,
   onOpenChange,
   person,
-  relations: _relations,
 }: PersonDetailSheetProps) {
   if (!open || !person) {
     return null;
