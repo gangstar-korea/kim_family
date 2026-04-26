@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { BRANCH_OPTIONS, FAMILY_ROLE_OPTIONS } from "@/lib/constants";
-import { getCurrentApprovalState, getCurrentUserProfile } from "@/lib/supabase/queries";
+import { getCurrentUserProfile } from "@/lib/supabase/queries";
 import type { AuthActionState, BranchCode, FamilyRoleType, JoinRequest } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -55,13 +55,7 @@ export async function loginAction(
     };
   }
 
-  const approvalState = await getCurrentApprovalState(supabase);
-
-  if (!approvalState || approvalState.status === "approved") {
-    redirect("/");
-  }
-
-  redirect("/me");
+  redirect("/");
 }
 
 export async function signupAction(
