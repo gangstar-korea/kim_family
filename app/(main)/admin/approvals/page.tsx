@@ -4,14 +4,14 @@ import { requireSuperAdminProfile } from "@/lib/auth/guards";
 import { getApprovalAdminItems } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageContainer } from "@/components/layout/page-container";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const TEXT = {
   title: "회원 승인 관리",
   description: "가입한 사용자의 승인 상태를 확인하고 승인 또는 반려할 수 있습니다.",
   empty: "표시할 가입 신청이 없습니다.",
-  emailGuide: "현재 데이터 구조상 이메일 대신 계정 ID와 연락처를 함께 표시합니다.",
+  accountGuide: "현재 구조에서는 계정 ID와 신청 정보를 함께 표시합니다.",
   accountId: "계정 ID",
   name: "이름",
   phone: "연락처",
@@ -25,6 +25,7 @@ const TEXT = {
   approvedFeedback: "승인되었습니다.",
   rejectedFeedback: "반려되었습니다.",
   failedFeedback: "처리에 실패했습니다.",
+  missingJoinRequest: "가입 신청 기록이 없어 이 화면에서는 바로 처리할 수 없습니다.",
 };
 
 type AdminApprovalsPageProps = {
@@ -37,6 +38,7 @@ export default async function AdminApprovalsPage({
   searchParams,
 }: AdminApprovalsPageProps) {
   await requireSuperAdminProfile();
+
   const supabase = await createClient();
   const approvalItems = await getApprovalAdminItems(supabase);
   const resolvedSearchParams = await searchParams;
@@ -50,7 +52,7 @@ export default async function AdminApprovalsPage({
           <CardDescription>{TEXT.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
-          <p className="text-sm text-muted-foreground">{TEXT.emailGuide}</p>
+          <p className="text-sm text-muted-foreground">{TEXT.accountGuide}</p>
           {feedback ? (
             <div
               className={
@@ -65,7 +67,7 @@ export default async function AdminApprovalsPage({
         </CardContent>
       </Card>
 
-          {approvalItems.length === 0 ? (
+      {approvalItems.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">{TEXT.empty}</CardContent>
         </Card>
@@ -106,9 +108,7 @@ export default async function AdminApprovalsPage({
                   </form>
                 </div>
               ) : item.effectiveStatus === "pending" ? (
-                <p className="text-sm text-muted-foreground">
-                  가입 신청 기록이 없어 이 화면에서는 바로 처리할 수 없습니다.
-                </p>
+                <p className="text-sm text-muted-foreground">{TEXT.missingJoinRequest}</p>
               ) : null}
             </CardContent>
           </Card>
