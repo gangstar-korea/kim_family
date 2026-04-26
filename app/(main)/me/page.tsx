@@ -1,8 +1,7 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
-import { getCurrentUserProfile } from "@/lib/supabase/queries";
-import { createClient } from "@/lib/supabase/server";
+import { resolveCurrentAccessContext } from "@/lib/auth/guards";
 
 const TEXT = {
   missingProfileTitle: "로그인 계정 확인이 필요합니다.",
@@ -17,8 +16,8 @@ const TEXT = {
 
 export default async function MePage() {
   await requireAuthenticatedUser();
-  const supabase = await createClient();
-  const profile = await getCurrentUserProfile(supabase);
+  const accessContext = await resolveCurrentAccessContext();
+  const profile = accessContext.profile;
 
   if (profile?.role === "super_admin") {
     return (
@@ -46,6 +45,22 @@ export default async function MePage() {
           </CardHeader>
           <CardContent className="text-sm leading-6 text-muted-foreground">
             로그인은 되었지만 이 계정에 연결된 user_profiles 정보를 찾지 못했습니다. 관리자에게 계정 연결 상태를 확인해 주세요.
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  if (accessContext.decision === "unknown_status") {
+    return (
+      <PageContainer>
+        <Card>
+          <CardHeader>
+            <CardTitle>승인 상태 확인이 필요합니다.</CardTitle>
+            <CardDescription>현재 계정의 승인 상태 값을 확인하지 못했습니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm leading-6 text-muted-foreground">
+            role과 status 값이 비어 있거나 예상과 다를 수 있습니다. 관리자에게 user_profiles 상태를 확인해 주세요.
           </CardContent>
         </Card>
       </PageContainer>
