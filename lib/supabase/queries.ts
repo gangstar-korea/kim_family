@@ -15,11 +15,28 @@ import type { createClient } from "@/lib/supabase/server";
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 export type ApprovalAdminItem = {
-  joinRequest: JoinRequest;
-  profile: Pick<UserProfile, "id" | "role" | "status" | "person_id" | "display_name" | "phone"> | null;
+  joinRequest: JoinRequest | null;
+  profile: Pick<
+    UserProfile,
+    | "id"
+    | "role"
+    | "status"
+    | "person_id"
+    | "display_name"
+    | "phone"
+    | "branch_code"
+    | "family_role_type"
+    | "created_at"
+  > | null;
   effectiveStatus: "pending" | "approved" | "rejected";
   role: AppRole | null;
   personId: string | null;
+  accountId: string;
+  displayName: string;
+  phone: string;
+  branchCode: BranchCode | null;
+  familyRoleType: UserProfile["family_role_type"] | JoinRequest["family_role_type"] | null;
+  createdAt: string;
 };
 
 export async function getCurrentUserProfile(supabase: SupabaseServerClient) {
@@ -287,30 +304,73 @@ export async function getApprovalAdminItems(
     getApprovalProfiles(supabase),
   ]);
 
-  const profileById = new Map(userProfiles.map((profile) => [profile.id, profile]));
+  const latestJoinRequestByUserId = new Map<string, JoinRequest>();
 
-  return joinRequests
-    .map((joinRequest) => {
-      const profile = profileById.get(joinRequest.user_id) ?? null;
+  joinRequests.forEach((joinRequest) => {
+    const existing = latestJoinRequestByUserId.get(joinRequest.user_id);
 
-      return {
-        joinRequest,
-        profile,
-        effectiveStatus: profile?.status ?? joinRequest.status,
-        role: profile?.role ?? null,
-        personId: profile?.person_id ?? joinRequest.person_id ?? null,
-      };
-    })
-    .sort((left, right) => {
-      const rankDiff =
-        getStatusSortRank(left.effectiveStatus) - getStatusSortRank(right.effectiveStatus);
+    if (!existing || existing.created_at < joinRequest.created_at) {
+      latestJoinRequestByUserId.set(joinRequest.user_id, joinRequest);
+    }
+  });
 
-      if (rankDiff !== 0) {
-        return rankDiff;
-      }
+  const approvalItems: ApprovalAdminItem[] = [];
+  const includedAccountIds = new Set<string>();
 
-      return left.joinRequest.created_at < right.joinRequest.created_at ? 1 : -1;
+  userProfiles.forEach((profile) => {
+    if (profile.role === "super_admin") {
+      return;
+    }
+
+    const joinRequest = latestJoinRequestByUserId.get(profile.id) ?? null;
+
+    approvalItems.push({
+      joinRequest,
+      profile,
+      effectiveStatus: profile.status ?? joinRequest?.status ?? "pending",
+      role: profile.role ?? null,
+      personId: profile.person_id ?? joinRequest?.person_id ?? null,
+      accountId: profile.id,
+      displayName: profile.display_name ?? joinRequest?.display_name ?? "-",
+      phone: profile.phone ?? joinRequest?.phone ?? "-",
+      branchCode: profile.branch_code ?? joinRequest?.branch_code ?? null,
+      familyRoleType: profile.family_role_type ?? joinRequest?.family_role_type ?? null,
+      createdAt: joinRequest?.created_at ?? profile.created_at,
     });
+
+    includedAccountIds.add(profile.id);
+  });
+
+  joinRequests.forEach((joinRequest) => {
+    if (includedAccountIds.has(joinRequest.user_id)) {
+      return;
+    }
+
+    approvalItems.push({
+      joinRequest,
+      profile: null,
+      effectiveStatus: joinRequest.status,
+      role: null,
+      personId: joinRequest.person_id ?? null,
+      accountId: joinRequest.user_id,
+      displayName: joinRequest.display_name,
+      phone: joinRequest.phone,
+      branchCode: joinRequest.branch_code,
+      familyRoleType: joinRequest.family_role_type,
+      createdAt: joinRequest.created_at,
+    });
+  });
+
+  return approvalItems.sort((left, right) => {
+    const rankDiff =
+      getStatusSortRank(left.effectiveStatus) - getStatusSortRank(right.effectiveStatus);
+
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    return left.createdAt < right.createdAt ? 1 : -1;
+  });
 }
 
 export async function getPendingEditRequests(supabase: SupabaseServerClient) {
@@ -331,10 +391,21 @@ export async function getPendingEditRequests(supabase: SupabaseServerClient) {
 async function getApprovalProfiles(supabase: SupabaseServerClient) {
   const { data, error } = await supabase
     .from("user_profiles")
-    .select("id, role, status, person_id, display_name, phone")
+    .select("id, role, status, person_id, display_name, phone, branch_code, family_role_type, created_at")
     .returns<
       Array<
-        Pick<UserProfile, "id" | "role" | "status" | "person_id" | "display_name" | "phone">
+        Pick<
+          UserProfile,
+          | "id"
+          | "role"
+          | "status"
+          | "person_id"
+          | "display_name"
+          | "phone"
+          | "branch_code"
+          | "family_role_type"
+          | "created_at"
+        >
       >
     >();
 
