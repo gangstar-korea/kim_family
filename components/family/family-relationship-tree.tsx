@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Info } from "lucide-react";
 
 import { PersonDetailSheet } from "@/components/family/person-detail-sheet";
@@ -38,12 +38,25 @@ export function FamilyRelationshipTree({
   const defaultSelectedPath = useMemo(() => buildDefaultSelectedPath(tree.roots), [tree.roots]);
   const [selectedPath, setSelectedPath] = useState<string[]>(defaultSelectedPath);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const lastColumnRef = useRef<HTMLElement | null>(null);
   const nodeById = useMemo(() => buildNodeMap(tree.roots), [tree.roots]);
   const relationsById = useMemo(
     () => buildPersonRelationsById(persons, relationships),
     [persons, relationships],
   );
   const columns = buildExplorerColumns(tree.roots, selectedPath, nodeById);
+
+  useEffect(() => {
+    if (!lastColumnRef.current) {
+      return;
+    }
+
+    lastColumnRef.current.scrollIntoView({
+      behavior: "smooth",
+      inline: "end",
+      block: "nearest",
+    });
+  }, [selectedPath, columns.length]);
 
   if (tree.roots.length === 0) {
     return (
@@ -68,6 +81,7 @@ export function FamilyRelationshipTree({
           {columns.map((column, columnIndex) => (
             <ExplorerColumn
               key={`${column.title}-${columnIndex}`}
+              ref={columnIndex === columns.length - 1 ? lastColumnRef : undefined}
               title={column.title}
               parentNode={column.parentNode}
               nodes={column.nodes}
@@ -113,15 +127,7 @@ function buildDefaultSelectedPath(roots: FamilyHierarchyNode[]) {
 
   const rootNode =
     roots.find((node) => node.unit.primary.branch_code === "ROOT") ?? roots[0];
-  // Prefer the BR01 bloodline as the initial expanded branch. If that branch
-  // is not present in the live data, fall back to the first direct blood child.
-  const preferredChild =
-    rootNode.children.find((child) => child.unit.primary.branch_code === "BR01") ??
-    rootNode.children[0];
-
-  return preferredChild
-    ? [rootNode.unit.id, preferredChild.unit.id]
-    : [rootNode.unit.id];
+  return [rootNode.unit.id];
 }
 
 function formatFamilyUnitLabel(node: FamilyHierarchyNode) {
@@ -166,15 +172,7 @@ function buildExplorerColumns(
   return columns;
 }
 
-function ExplorerColumn({
-  title,
-  parentNode,
-  nodes,
-  selectedNodeId,
-  columnIndex,
-  onSelectNode,
-  onSelectPerson,
-}: {
+const ExplorerColumn = forwardRef<HTMLElement, {
   title: string;
   parentNode: FamilyHierarchyNode | null;
   nodes: FamilyHierarchyNode[];
@@ -182,9 +180,20 @@ function ExplorerColumn({
   columnIndex: number;
   onSelectNode: (node: FamilyHierarchyNode, columnIndex: number) => void;
   onSelectPerson: (person: Person) => void;
-}) {
+}>(function ExplorerColumn({
+  title,
+  parentNode,
+  nodes,
+  selectedNodeId,
+  columnIndex,
+  onSelectNode,
+  onSelectPerson,
+}, ref) {
   return (
-    <section className="w-[16.5rem] shrink-0 rounded-lg border border-border bg-background p-3 shadow-sm">
+    <section
+      ref={ref}
+      className="w-[21rem] min-w-[21rem] shrink-0 rounded-lg border border-border bg-background p-3 shadow-sm"
+    >
       <div className="mb-3 space-y-1">
         <p className="text-[11px] font-semibold text-muted-foreground">
           {parentNode ? `${TEXT.topPath} > ${formatFamilyUnitLabel(parentNode)}` : TEXT.topPath}
@@ -216,7 +225,7 @@ function ExplorerColumn({
       )}
     </section>
   );
-}
+});
 
 function ExplorerNodeButton({
   node,
@@ -232,7 +241,7 @@ function ExplorerNodeButton({
   return (
     <div
       className={cn(
-        "rounded-xl border p-2 transition-colors",
+        "rounded-xl border p-2.5 transition-colors",
         selected ? "border-primary/50 bg-primary/5" : "border-border bg-card",
       )}
     >
@@ -256,7 +265,7 @@ function ExplorerNodeButton({
             <button
               type="button"
               onClick={onClick}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ChevronRight className="h-4 w-4" aria-hidden />
               <span className="sr-only">{node.unit.primary.full_name}</span>
@@ -314,15 +323,15 @@ function TreePersonButton({
   return (
     <div
       className={cn(
-        "flex min-h-[72px] rounded-lg border",
+        "flex min-h-[76px] rounded-lg border",
         role === "primary" ? "border-primary/20 bg-primary/5" : "border-border/80 bg-background",
         !person.is_alive && "bg-muted/50 text-muted-foreground",
       )}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2 text-left"
+        className="flex min-w-0 flex-1 flex-col justify-center px-3.5 py-2.5 text-left"
       >
-        <span className="line-clamp-2 break-keep text-sm font-bold leading-5">
+        <span className="break-keep text-sm font-bold leading-5">
           {person.full_name}
         </span>
         {!person.is_alive ? (
