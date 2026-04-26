@@ -329,26 +329,26 @@ function TreePersonButton({
       )}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col justify-start px-3.5 pb-2.5 pt-4 pr-10 text-left"
+        className="relative flex min-w-0 flex-1 px-3.5 py-2.5 text-left"
       >
-        <div className="flex min-h-[40px] items-start pt-2">
+        <div className="flex min-h-[40px] w-full items-center">
           <span className="break-keep text-base font-bold leading-6">
             {person.full_name}
           </span>
         </div>
+        {!person.is_alive ? (
+          <span className="absolute left-1/2 top-2 inline-flex min-w-10 -translate-x-1/2 justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {TEXT.deceased}
+          </span>
+        ) : null}
       </div>
-      {!person.is_alive ? (
-        <span className="absolute left-[calc(50%-20px)] top-2 inline-flex min-w-10 justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-          {TEXT.deceased}
-        </span>
-      ) : null}
       <button
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onSelect(person);
         }}
-        className="inline-flex w-11 shrink-0 items-start justify-center rounded-r-lg border-l border-border/70 pt-6 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex w-11 shrink-0 items-center justify-center rounded-r-lg border-l border-border/70 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {TEXT.detail}
       </button>
