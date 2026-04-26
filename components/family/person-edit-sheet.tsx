@@ -23,11 +23,11 @@ type PersonEditSheetProps = {
 };
 
 const TEXT = {
-  title: "\uAC00\uC871 \uC815\uBCF4 \uC218\uC815",
+  title: "가족 정보 수정",
   description:
-    "\uD604\uC7AC \uAC00\uC871 \uC815\uBCF4\uB97C \uBC14\uB85C \uC218\uC815\uD569\uB2C8\uB2E4. \uBD84\uD30C, \uC138\uB300, \uB0B4\uBD80 \uCF54\uB4DC\uB294 \uC774 \uB2E8\uACC4\uC5D0\uC11C \uBC14\uAFB8\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-  cancel: "\uCDE8\uC18C",
-  submit: "\uC218\uC815 \uC800\uC7A5",
+    "현재 가족 정보를 바로 수정합니다. 분파, 세대, 내부 코드는 이 단계에서 바꾸지 않습니다.",
+  cancel: "취소",
+  submit: "수정 저장",
 };
 
 export function PersonEditSheet({
@@ -92,7 +92,7 @@ export function PersonEditSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${currentPerson.full_name} \uC815\uBCF4\uB97C \uC218\uC815\uD569\uB2C8\uB2E4. ${TEXT.description}`}
+      description={`${currentPerson.full_name} 정보를 수정합니다. ${TEXT.description}`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />
@@ -114,7 +114,7 @@ export function PersonEditSheet({
             {TEXT.cancel}
           </Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
-            {isPending ? "\uC800\uC7A5 \uC911..." : TEXT.submit}
+            {isPending ? "저장 중..." : TEXT.submit}
           </Button>
         </div>
       </form>

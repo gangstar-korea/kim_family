@@ -22,9 +22,9 @@ type PersonAddChildSheetProps = {
 };
 
 const TEXT = {
-  title: "\uC790\uB140 \uCD94\uAC00",
-  cancel: "\uCDE8\uC18C",
-  submit: "\uC790\uB140 \uB4F1\uB85D",
+  title: "자녀 추가",
+  cancel: "취소",
+  submit: "자녀 등록",
 };
 
 export function PersonAddChildSheet({
@@ -89,7 +89,7 @@ export function PersonAddChildSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${currentParent.full_name} \uC544\uB798 \uC138\uB300\uB85C \uC790\uB140\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uBCF4\uB2E4 1 \uB2E8\uACC4 \uC544\uB798\uB85C \uACC4\uC0B0\uB429\uB2C8\uB2E4.`}
+      description={`${currentParent.full_name} 아래 세대로 자녀를 등록합니다. generation_depth는 현재 인물보다 1단계 아래로 계산됩니다.`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} showBirthOrder />
@@ -111,7 +111,7 @@ export function PersonAddChildSheet({
             {TEXT.cancel}
           </Button>
           <Button type="submit" className="flex-1" disabled={isPending}>
-            {isPending ? "\uB4F1\uB85D \uC911..." : TEXT.submit}
+            {isPending ? "등록 중..." : TEXT.submit}
           </Button>
         </div>
       </form>

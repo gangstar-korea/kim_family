@@ -23,11 +23,11 @@ type PersonAddSpouseSheetProps = {
 };
 
 const TEXT = {
-  title: "\uBC30\uC6B0\uC790 \uCD94\uAC00",
-  cancel: "\uCDE8\uC18C",
-  submit: "\uBC30\uC6B0\uC790 \uB4F1\uB85D",
+  title: "배우자 추가",
+  cancel: "취소",
+  submit: "배우자 등록",
   spouseExists:
-    "\uC774\uBBF8 \uBC30\uC6B0\uC790 \uAD00\uACC4\uAC00 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC5B4 \uC774 \uB2E8\uACC4\uC5D0\uC11C\uB294 \uCD94\uAC00 \uB4F1\uB85D\uC744 \uC7A0\uC2DC \uB9C9\uC544 \uB461\uB2C8\uB2E4.",
+    "이미 배우자 관계가 등록되어 있어 이 단계에서는 추가 등록을 잠시 막아 둡니다.",
 };
 
 export function PersonAddSpouseSheet({
@@ -97,7 +97,7 @@ export function PersonAddSpouseSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={TEXT.title}
-      description={`${currentTargetPerson.full_name} \uAC00\uAD6C\uC5D0 \uBC30\uC6B0\uC790\uB97C \uB4F1\uB85D\uD569\uB2C8\uB2E4. generation_depth\uB294 \uD604\uC7AC \uC778\uBB3C\uACFC \uB3D9\uC77C\uD558\uAC8C \uC800\uC7A5\uB429\uB2C8\uB2E4.`}
+      description={`${currentTargetPerson.full_name} 가구에 배우자를 등록합니다. generation_depth는 현재 인물과 동일하게 저장됩니다.`}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <PersonFormFields values={values} onChange={handleChange} />
@@ -123,7 +123,7 @@ export function PersonAddSpouseSheet({
             className="flex-1"
             disabled={isPending || spouseExists}
           >
-            {isPending ? "\uB4F1\uB85D \uC911..." : TEXT.submit}
+            {isPending ? "등록 중..." : TEXT.submit}
           </Button>
         </div>
       </form>

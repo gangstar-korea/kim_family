@@ -21,10 +21,10 @@ type PersonFormFieldsProps = {
 };
 
 const GENDER_OPTIONS = [
-  { value: "__empty__", label: "\uC120\uD0DD \uC548 \uD568" },
-  { value: "male", label: "\uB0A8\uC131" },
-  { value: "female", label: "\uC5EC\uC131" },
-  { value: "unknown", label: "\uBBF8\uC9C0\uC815" },
+  { value: "__empty__", label: "선택 안 함" },
+  { value: "male", label: "남성" },
+  { value: "female", label: "여성" },
+  { value: "unknown", label: "미지정" },
 ] as const;
 
 export function PersonFormFields({
@@ -34,17 +34,17 @@ export function PersonFormFields({
 }: PersonFormFieldsProps) {
   return (
     <div className="space-y-4">
-      <FormField label="\uC774\uB984" required htmlFor="full_name">
+      <FormField label="이름" required htmlFor="full_name">
         <Input
           id="full_name"
           value={values.full_name}
           onChange={(event) => onChange("full_name", event.target.value)}
-          placeholder="\uC774\uB984\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694"
+          placeholder="이름을 입력해 주세요"
         />
       </FormField>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="\uC131\uBCC4" htmlFor="gender">
+        <FormField label="성별" htmlFor="gender">
           <Select
             value={values.gender || "__empty__"}
             onValueChange={(value) =>
@@ -55,7 +55,7 @@ export function PersonFormFields({
             }
           >
             <SelectTrigger id="gender">
-              <SelectValue placeholder="\uC131\uBCC4 \uC120\uD0DD" />
+              <SelectValue placeholder="성별 선택" />
             </SelectTrigger>
             <SelectContent>
               {GENDER_OPTIONS.map((option) => (
@@ -67,7 +67,7 @@ export function PersonFormFields({
           </Select>
         </FormField>
 
-        <FormField label="\uC0DD\uB144\uC6D4\uC77C" htmlFor="birth_date">
+        <FormField label="생년월일" htmlFor="birth_date">
           <Input
             id="birth_date"
             type="date"
@@ -78,7 +78,7 @@ export function PersonFormFields({
       </div>
 
       {showBirthOrder ? (
-        <FormField label="\uCD9C\uC0DD \uC21C\uC11C" htmlFor="birth_order">
+        <FormField label="출생 순서" htmlFor="birth_order">
           <Input
             id="birth_order"
             type="number"
@@ -86,7 +86,7 @@ export function PersonFormFields({
             step={1}
             value={values.birth_order}
             onChange={(event) => onChange("birth_order", event.target.value)}
-            placeholder="\uC608: 1"
+            placeholder="예: 1"
           />
         </FormField>
       ) : null}
@@ -98,11 +98,11 @@ export function PersonFormFields({
           onChange={(event) => onChange("is_alive", event.target.checked)}
           className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
         />
-        <span>\uC0DD\uC874\uC790</span>
+        <span>생존자</span>
       </label>
 
       {!values.is_alive ? (
-        <FormField label="\uBCC4\uC138\uC77C" htmlFor="deceased_date">
+        <FormField label="별세일" htmlFor="deceased_date">
           <Input
             id="deceased_date"
             type="date"
@@ -112,7 +112,7 @@ export function PersonFormFields({
         </FormField>
       ) : null}
 
-      <FormField label="\uC5F0\uB77D\uCC98" htmlFor="phone">
+      <FormField label="연락처" htmlFor="phone">
         <Input
           id="phone"
           inputMode="tel"
@@ -122,31 +122,31 @@ export function PersonFormFields({
         />
       </FormField>
 
-      <FormField label="\uC8FC\uC18C" htmlFor="address">
+      <FormField label="주소" htmlFor="address">
         <Input
           id="address"
           value={values.address}
           onChange={(event) => onChange("address", event.target.value)}
-          placeholder="\uC8FC\uC18C\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694"
+          placeholder="주소를 입력해 주세요"
         />
       </FormField>
 
-      <FormField label="\uC9C0\uC5ED" htmlFor="region">
+      <FormField label="지역" htmlFor="region">
         <Input
           id="region"
           value={values.region}
           onChange={(event) => onChange("region", event.target.value)}
-          placeholder="\uC9C0\uC5ED \uC815\uBCF4(\uC120\uD0DD)"
+          placeholder="지역 정보(선택)"
         />
       </FormField>
 
-      <FormField label="\uBA54\uBAA8" htmlFor="memo">
+      <FormField label="메모" htmlFor="memo">
         <textarea
           id="memo"
           rows={4}
           value={values.memo}
           onChange={(event) => onChange("memo", event.target.value)}
-          placeholder="\uAC00\uC871 \uBA54\uBAA8\uB97C \uB0A8\uACA8 \uC8FC\uC138\uC694"
+          placeholder="가족 메모를 남겨 주세요"
           className={cn(
             "flex min-h-28 w-full rounded-md border border-input bg-card px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring",
           )}

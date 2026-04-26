@@ -26,7 +26,7 @@ export function PersonSheetShell({
     <div className="fixed inset-0 z-[60] flex items-end bg-black/45 px-3 pb-3 pt-12 sm:items-center sm:justify-center sm:p-6">
       <button
         type="button"
-        aria-label="\uB2EB\uAE30"
+        aria-label="닫기"
         className="absolute inset-0 cursor-default"
         onClick={() => onOpenChange(false)}
       />
@@ -50,7 +50,7 @@ export function PersonSheetShell({
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-4 w-4" aria-hidden />
-            <span className="sr-only">\uB2EB\uAE30</span>
+            <span className="sr-only">닫기</span>
           </button>
         </div>
 
