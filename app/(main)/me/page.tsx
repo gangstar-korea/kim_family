@@ -18,6 +18,22 @@ export default async function MePage() {
   const supabase = await createClient();
   const approvalState = await getCurrentApprovalState(supabase);
 
+  if (approvalState?.profile?.role === "super_admin") {
+    return (
+      <PageContainer>
+        <Card>
+          <CardHeader>
+            <CardTitle>{TEXT.approvedTitle}</CardTitle>
+            <CardDescription>{TEXT.approvedDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm leading-6 text-muted-foreground">
+            user_profiles.person_id 기준으로 내 가족 정보, 승인 상태, 수정 요청 내역을 보여줄 예정입니다.
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
+  }
+
   if (!approvalState || approvalState.status === "pending") {
     return (
       <PageContainer>

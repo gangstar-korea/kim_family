@@ -84,6 +84,14 @@ export async function getCurrentApprovalState(
 
   const latestJoinRequest = await getCurrentUserJoinRequest(supabase);
 
+  if (profile.role === "super_admin") {
+    return {
+      profile,
+      latestJoinRequest,
+      status: "approved",
+    };
+  }
+
   return {
     profile,
     latestJoinRequest,
