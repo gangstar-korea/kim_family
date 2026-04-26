@@ -7,7 +7,7 @@ import type { FamilyGraphData } from "@/lib/types";
 const TEXT = {
   title: "\uAC00\uC871 \uAD00\uACC4 \uC911\uC2EC \uACC4\uCE35\uB3C4",
   description:
-    "\uBD80\uBAA8, \uC790\uB140, \uBC30\uC6B0\uC790 \uAD00\uACC4\uB97C \uC2DC\uAC01\uC801\uC73C\uB85C \uC5F0\uACB0\uD558\uB294 \uC804\uC6A9 \uD654\uBA74\uC785\uB2C8\uB2E4. \uB2E4\uC74C \uB2E8\uACC4\uC5D0\uC11C \uC2E4\uC81C \uAD00\uACC4\uB3C4 UI\uB97C \uC774 \uC601\uC5ED\uC5D0 \uBD99\uC785\uB2C8\uB2E4.",
+    "\uCD5C\uC0C1\uC704 \uAC00\uAD6C\uC5D0\uC11C \uC2DC\uC791\uD574 \uC120\uD0DD\uD55C \uC778\uBB3C\uC758 \uC790\uB140 \uAC00\uC9C0\uB97C \uC624\uB978\uCABD \uCEEC\uB7FC\uC73C\uB85C \uD655\uC7A5\uD558\uB294 \uD0D0\uC0C9\uD615 \uACC4\uCE35\uB3C4\uC785\uB2C8\uB2E4.",
 };
 
 type FamilyTreeTabProps = {
@@ -17,7 +17,17 @@ type FamilyTreeTabProps = {
 export function FamilyTreeTab({ data }: FamilyTreeTabProps) {
   const tree = buildFamilyHierarchyTree(data.persons, data.relationships, 3);
 
-  return <FamilyTreeStage tree={<FamilyRelationshipTree tree={tree} />} />;
+  return (
+    <FamilyTreeStage
+      tree={
+        <FamilyRelationshipTree
+          tree={tree}
+          persons={data.persons}
+          relationships={data.relationships}
+        />
+      }
+    />
+  );
 }
 
 function FamilyTreeStage({ tree }: { tree: ReactNode }) {

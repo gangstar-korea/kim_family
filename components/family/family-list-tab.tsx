@@ -9,5 +9,12 @@ type FamilyListTabProps = {
 export function FamilyListTab({ data }: FamilyListTabProps) {
   const generationList = buildFamilyTree(data.persons, data.relationships);
 
-  return <FamilyGenerationListView tree={generationList} />;
+  return (
+    <FamilyGenerationListView
+      tree={generationList}
+      persons={data.persons}
+      relationships={data.relationships}
+    />
+  );
+}
 }

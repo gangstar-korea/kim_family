@@ -1,4 +1,4 @@
-import type { Person, Relationship } from "@/lib/types";
+import type { Person, PersonRelations, PersonRelationsById, Relationship } from "@/lib/types";
 
 export type FamilyUnitMember = {
   person: Person;
@@ -278,6 +278,64 @@ export function buildFamilyTree(persons: Person[], relationships: Relationship[]
   return {
     generations,
   };
+}
+
+export function buildPersonRelationsById(
+  persons: Person[],
+  relationships: Relationship[],
+): PersonRelationsById {
+  const personById = new Map(persons.map((person) => [person.id, person]));
+  const relationsById = Object.fromEntries(
+    persons.map((person) => [
+      person.id,
+      {
+        spouses: [],
+        parents: [],
+        children: [],
+      } satisfies PersonRelations,
+    ]),
+  ) as PersonRelationsById;
+
+  relationships.forEach((relationship) => {
+    const person = personById.get(relationship.person_id);
+    const relatedPerson = personById.get(relationship.related_person_id);
+
+    if (!person || !relatedPerson) {
+      return;
+    }
+
+    if (relationship.relation_type === "spouse") {
+      relationsById[person.id]?.spouses.push(relatedPerson);
+      relationsById[relatedPerson.id]?.spouses.push(person);
+      return;
+    }
+
+    const parentChild = relationToParentChild(relationship, person, relatedPerson);
+
+    if (!parentChild) {
+      return;
+    }
+
+    const parent = personById.get(parentChild.parentId);
+    const child = personById.get(parentChild.childId);
+
+    if (!parent || !child) {
+      return;
+    }
+
+    relationsById[parent.id]?.children.push(child);
+    relationsById[child.id]?.parents.push(parent);
+  });
+
+  persons.forEach((person) => {
+    const relations = relationsById[person.id];
+
+    relations.spouses = uniquePeople(relations.spouses);
+    relations.parents = uniquePeople(relations.parents);
+    relations.children = uniquePeople(relations.children);
+  });
+
+  return relationsById;
 }
 
 export function countFamilyTreeNodes(tree: FamilyTree) {

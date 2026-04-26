@@ -133,3 +133,11 @@ export type FamilyGraphDebug = {
     generationDepth: "order_only";
   };
 };
+
+export type PersonRelations = {
+  spouses: Person[];
+  parents: Person[];
+  children: Person[];
+};
+
+export type PersonRelationsById = Record<string, PersonRelations>;

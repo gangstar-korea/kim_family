@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronRight, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, Info } from "lucide-react";
 
+import { PersonDetailSheet } from "@/components/family/person-detail-sheet";
 import type {
   FamilyHierarchyNode,
   FamilyHierarchyTree,
   FamilyUnitMember,
 } from "@/lib/family/tree-adapter";
-import type { Person } from "@/lib/types";
+import { buildPersonRelationsById } from "@/lib/family/tree-adapter";
+import type { Person, Relationship } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TEXT = {
@@ -20,34 +21,27 @@ const TEXT = {
   deceased: "\uACE0\uC778",
   spouseSeparator: "\uBC30\uC6B0\uC790",
   noChildren: "\uD45C\uC2DC\uD560 \uC790\uB140\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
-  detailTitle: "\uAC00\uC871 \uC0C1\uC138",
-  close: "\uB2EB\uAE30",
-  name: "\uC774\uB984",
-  hanjaName: "\uD55C\uC790\uBA85",
-  role: "\uAD6C\uBD84",
-  blood: "\uD608\uC871",
-  spouse: "\uBC30\uC6B0\uC790",
-  branch: "\uBD84\uD30C",
-  generation: "\uC138\uB300",
-  birthOrder: "\uCD9C\uC0DD \uC21C\uC11C",
-  birthDate: "\uC0DD\uB144\uC6D4\uC77C",
-  deceasedDate: "\uBCC4\uC138\uC77C",
-  phone: "\uC5F0\uB77D\uCC98",
-  email: "\uC774\uBA54\uC77C",
-  address: "\uC8FC\uC18C",
-  region: "\uC9C0\uC5ED",
-  memo: "\uBA54\uBAA8",
-  noValue: "-",
+  detail: "\uC0C1\uC138",
 };
 
 type FamilyRelationshipTreeProps = {
   tree: FamilyHierarchyTree;
+  persons: Person[];
+  relationships: Relationship[];
 };
 
-export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
+export function FamilyRelationshipTree({
+  tree,
+  persons,
+  relationships,
+}: FamilyRelationshipTreeProps) {
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const nodeById = useMemo(() => buildNodeMap(tree.roots), [tree.roots]);
+  const relationsById = useMemo(
+    () => buildPersonRelationsById(persons, relationships),
+    [persons, relationships],
+  );
   const columns = buildExplorerColumns(tree.roots, selectedPath, nodeById);
 
   if (tree.roots.length === 0) {
@@ -85,9 +79,15 @@ export function FamilyRelationshipTree({ tree }: FamilyRelationshipTreeProps) {
         </div>
       </div>
 
-      <PersonDetailPanel
+      <PersonDetailSheet
+        open={Boolean(selectedPerson)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedPerson(null);
+          }
+        }}
         person={selectedPerson}
-        onClose={() => setSelectedPerson(null)}
+        relations={selectedPerson ? relationsById[selectedPerson.id] ?? null : null}
       />
     </>
   );
@@ -214,19 +214,32 @@ function ExplorerNodeButton({
       )}
     >
       <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onClick}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onClick();
+            }
+          }}
+          className="min-w-0 flex-1 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <CoupleUnitCard node={node} onSelectPerson={onSelectPerson} />
         </div>
-        {node.children.length > 0 ? (
-          <button
-            type="button"
-            onClick={onClick}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-            <span className="sr-only">{node.unit.primary.full_name}</span>
-          </button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1">
+          {node.children.length > 0 ? (
+            <button
+              type="button"
+              onClick={onClick}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+              <span className="sr-only">{node.unit.primary.full_name}</span>
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -264,6 +277,7 @@ function CoupleUnitCard({
           <TreePersonButton
             member={member}
             compact={compact}
+            expandable
             onSelect={onSelectPerson}
           />
         </div>
@@ -275,137 +289,53 @@ function CoupleUnitCard({
 function TreePersonButton({
   member,
   compact,
+  expandable,
   onSelect,
 }: {
   member: FamilyUnitMember;
   compact?: boolean;
+  expandable?: boolean;
   onSelect: (person: Person) => void;
 }) {
   const { person, role } = member;
 
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(person);
-      }}
+    <div
       className={cn(
-        "flex min-h-12 flex-col items-center justify-center rounded-md border px-2 py-1.5 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-12 rounded-md border",
         compact ? "w-20" : "w-24",
         role === "primary" ? "border-primary/30 bg-primary/5" : "border-border bg-background",
         !person.is_alive && "bg-muted/70 text-muted-foreground",
       )}
     >
-      <span className="line-clamp-2 break-keep font-bold leading-4">
-        {person.full_name}
-      </span>
-      {!person.is_alive ? (
-        <span className="mt-1 rounded-full border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-          {TEXT.deceased}
+      <div
+        className="flex min-w-0 flex-1 flex-col items-center justify-center px-2 py-1.5 text-center text-xs"
+      >
+        <span className="line-clamp-2 break-keep font-bold leading-4">
+          {person.full_name}
         </span>
-      ) : null}
-    </button>
-  );
-}
-
-function PersonDetailPanel({
-  person,
-  onClose,
-}: {
-  person: Person | null;
-  onClose: () => void;
-}) {
-  if (!person) {
-    return null;
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-3 pb-3 pt-12 sm:items-center sm:justify-center sm:p-6">
+        {!person.is_alive ? (
+          <span className="mt-1 rounded-full border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            {TEXT.deceased}
+          </span>
+        ) : null}
+      </div>
       <button
         type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label={TEXT.close}
-        onClick={onClose}
-      />
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="family-person-detail-title"
-        className="relative max-h-[82vh] w-full overflow-y-auto rounded-lg border border-border bg-card p-4 shadow-lg sm:max-w-md"
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(person);
+        }}
+        className={cn(
+          "inline-flex w-8 shrink-0 items-center justify-center border-l border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          expandable ? "bg-background/40" : "bg-background/20",
+        )}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-muted-foreground">{TEXT.detailTitle}</p>
-            <h3 id="family-person-detail-title" className="mt-1 truncate text-xl font-bold">
-              {person.full_name}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <X className="h-4 w-4" aria-hidden />
-            <span className="sr-only">{TEXT.close}</span>
-          </button>
-        </div>
-
-        <dl className="space-y-2 text-sm">
-          <DetailItem icon={UserRound} label={TEXT.name} value={person.full_name} />
-          <DetailItem label={TEXT.hanjaName} value={person.hanja_name} />
-          <DetailItem
-            label={TEXT.role}
-            value={person.family_role_type === "blood" ? TEXT.blood : TEXT.spouse}
-          />
-          <DetailItem label={TEXT.branch} value={person.branch_code} />
-          <DetailItem
-            label={TEXT.generation}
-            value={
-              typeof person.generation_depth === "number"
-                ? `${person.generation_depth}${TEXT.generation}`
-                : null
-            }
-          />
-          <DetailItem
-            label={TEXT.birthOrder}
-            value={typeof person.birth_order === "number" ? String(person.birth_order) : null}
-          />
-          <DetailItem icon={CalendarDays} label={TEXT.birthDate} value={person.birth_date} />
-          {!person.is_alive ? (
-            <DetailItem
-              icon={CalendarDays}
-              label={TEXT.deceasedDate}
-              value={person.deceased_date}
-            />
-          ) : null}
-          <DetailItem icon={Phone} label={TEXT.phone} value={person.phone} />
-          <DetailItem icon={Mail} label={TEXT.email} value={person.email} />
-          <DetailItem icon={MapPin} label={TEXT.address} value={person.address} />
-          <DetailItem label={TEXT.region} value={person.region} />
-          <DetailItem label={TEXT.memo} value={person.memo} />
-        </dl>
-      </section>
-    </div>
-  );
-}
-
-function DetailItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon?: LucideIcon;
-  label: string;
-  value: string | null;
-}) {
-  return (
-    <div className="grid grid-cols-[5.5rem_1fr] gap-3 rounded-md bg-muted/50 px-3 py-2">
-      <dt className="flex items-center gap-1.5 font-semibold text-muted-foreground">
-        {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
-        {label}
-      </dt>
-      <dd className="min-w-0 break-words text-foreground">{value || TEXT.noValue}</dd>
+        <Info className="h-3.5 w-3.5" aria-hidden />
+        <span className="sr-only">
+          {person.full_name} {TEXT.detail}
+        </span>
+      </button>
     </div>
   );
 }

@@ -1,13 +1,17 @@
-import Link from "next/link";
+"use client";
+
+import { useMemo, useState } from "react";
 import { CalendarDays, Heart, MapPin, UsersRound } from "lucide-react";
 
+import { PersonDetailSheet } from "@/components/family/person-detail-sheet";
 import type {
   FamilyGenerationGroup,
   FamilyUnit,
   FamilyUnitMember,
   FamilyTree,
 } from "@/lib/family/tree-adapter";
-import type { Person } from "@/lib/types";
+import { buildPersonRelationsById } from "@/lib/family/tree-adapter";
+import type { Person, Relationship } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TEXT = {
@@ -32,9 +36,21 @@ const TEXT = {
 
 type FamilyTreeProps = {
   tree: FamilyTree;
+  persons: Person[];
+  relationships: Relationship[];
 };
 
-export function FamilyGenerationListView({ tree }: FamilyTreeProps) {
+export function FamilyGenerationListView({
+  tree,
+  persons,
+  relationships,
+}: FamilyTreeProps) {
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const relationsById = useMemo(
+    () => buildPersonRelationsById(persons, relationships),
+    [persons, relationships],
+  );
+
   if (tree.generations.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
@@ -44,18 +60,37 @@ export function FamilyGenerationListView({ tree }: FamilyTreeProps) {
   }
 
   return (
-    <div className="space-y-5 md:space-y-6">
-      {tree.generations.map((generation) => (
-        <GenerationSection
-          key={generation.generationDepth ?? "unknown"}
-          generation={generation}
-        />
-      ))}
-    </div>
+    <>
+      <div className="space-y-5 md:space-y-6">
+        {tree.generations.map((generation) => (
+          <GenerationSection
+            key={generation.generationDepth ?? "unknown"}
+            generation={generation}
+            onSelectPerson={setSelectedPerson}
+          />
+        ))}
+      </div>
+      <PersonDetailSheet
+        open={Boolean(selectedPerson)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedPerson(null);
+          }
+        }}
+        person={selectedPerson}
+        relations={selectedPerson ? relationsById[selectedPerson.id] ?? null : null}
+      />
+    </>
   );
 }
 
-function GenerationSection({ generation }: { generation: FamilyGenerationGroup }) {
+function GenerationSection({
+  generation,
+  onSelectPerson,
+}: {
+  generation: FamilyGenerationGroup;
+  onSelectPerson: (person: Person) => void;
+}) {
   const memberCount = generation.units.reduce(
     (total, unit) => total + 1 + unit.spouses.length,
     0,
@@ -79,14 +114,20 @@ function GenerationSection({ generation }: { generation: FamilyGenerationGroup }
 
       <div className="grid gap-3 lg:grid-cols-2">
         {generation.units.map((unit) => (
-          <FamilyUnitCard key={unit.id} unit={unit} />
+          <FamilyUnitCard key={unit.id} unit={unit} onSelectPerson={onSelectPerson} />
         ))}
       </div>
     </section>
   );
 }
 
-function FamilyUnitCard({ unit }: { unit: FamilyUnit }) {
+function FamilyUnitCard({
+  unit,
+  onSelectPerson,
+}: {
+  unit: FamilyUnit;
+  onSelectPerson: (person: Person) => void;
+}) {
   const members: FamilyUnitMember[] = [
     { person: unit.primary, role: "primary" },
     ...unit.spouses.map((spouse) => ({
@@ -111,7 +152,11 @@ function FamilyUnitCard({ unit }: { unit: FamilyUnit }) {
 
       <div className="grid gap-2 sm:grid-cols-2">
         {members.map((member) => (
-          <PersonCard key={`${unit.id}-${member.person.id}`} member={member} />
+          <PersonCard
+            key={`${unit.id}-${member.person.id}`}
+            member={member}
+            onSelectPerson={onSelectPerson}
+          />
         ))}
       </div>
 
@@ -120,14 +165,21 @@ function FamilyUnitCard({ unit }: { unit: FamilyUnit }) {
   );
 }
 
-function PersonCard({ member }: { member: FamilyUnitMember }) {
+function PersonCard({
+  member,
+  onSelectPerson,
+}: {
+  member: FamilyUnitMember;
+  onSelectPerson: (person: Person) => void;
+}) {
   const { person, role } = member;
 
   return (
-    <Link
-      href={`/family/${person.id}`}
+    <button
+      type="button"
+      onClick={() => onSelectPerson(person)}
       className={cn(
-        "block min-w-0 rounded-md border p-3 transition-colors hover:bg-accent/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "block min-w-0 rounded-md border p-3 text-left transition-colors hover:bg-accent/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         role === "primary" ? "border-primary/30 bg-primary/5" : "border-border bg-card",
         !person.is_alive && "bg-muted/60",
       )}
@@ -147,7 +199,7 @@ function PersonCard({ member }: { member: FamilyUnitMember }) {
       </div>
 
       <PersonMeta person={person} />
-    </Link>
+    </button>
   );
 }
 
