@@ -145,13 +145,17 @@ export type PersonRelationsById = Record<string, PersonRelations>;
 export type PersonFormValues = {
   full_name: string;
   gender: Person["gender"] | "";
-  birth_date: string;
+  birth_calendar_type: "solar" | "lunar";
+  birth_year: string;
+  birth_month: string;
+  birth_day: string;
+  is_lunar_leap_month: boolean;
   is_alive: boolean;
   deceased_date: string;
   phone: string;
-  address: string;
+  address_base: string;
+  address_detail: string;
   memo: string;
-  region: string;
   birth_order: string;
 };
 

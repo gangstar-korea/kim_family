@@ -32,15 +32,14 @@ export async function updatePersonAction(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const authResult = await supabase.auth.getUser();
+  const user = authResult.data.user;
 
-  if (userError || !user) {
+  if (authResult.error || !user) {
+    console.error("[person write] update auth failed", authResult.error?.message ?? "no user");
     return {
       ok: false,
-      message: "\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
     };
   }
 
@@ -51,20 +50,37 @@ export async function updatePersonAction(
     .maybeSingle<Person>();
 
   if (personError || !existingPerson) {
+    console.error("[person write] update target lookup failed", {
+      personId,
+      error: personError?.message ?? "person not found",
+    });
     return {
       ok: false,
-      message: "\uC218\uC815\uD560 \uAC00\uC871 \uC815\uBCF4\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      message: "수정할 가족 정보를 찾지 못했습니다.",
     };
   }
 
   const payload = buildPersonUpdatePayload(existingPerson, values, user.id);
+  console.info("[person write] update payload", {
+    personId,
+    payload,
+  });
+
   const { error } = await supabase.from("persons").update(payload).eq("id", personId);
 
   if (error) {
-    console.error("[person write] update failed", error.message);
+    console.error("[person write] update failed", {
+      personId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      payload,
+    });
+
     return {
       ok: false,
-      message: "\uC218\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+      message: buildWriteFailureMessage("수정 저장", error),
     };
   }
 
@@ -72,7 +88,7 @@ export async function updatePersonAction(
 
   return {
     ok: true,
-    message: "\uAC00\uC871 \uC815\uBCF4\uB97C \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.",
+    message: "가족 정보를 수정했습니다.",
     personId,
   };
 }
@@ -93,15 +109,14 @@ export async function addChildAction(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const authResult = await supabase.auth.getUser();
+  const user = authResult.data.user;
 
-  if (userError || !user) {
+  if (authResult.error || !user) {
+    console.error("[person write] child auth failed", authResult.error?.message ?? "no user");
     return {
       ok: false,
-      message: "\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
     };
   }
 
@@ -112,9 +127,13 @@ export async function addChildAction(
     .maybeSingle<Person>();
 
   if (parentError || !parentPerson) {
+    console.error("[person write] child parent lookup failed", {
+      parentId,
+      error: parentError?.message ?? "parent not found",
+    });
     return {
       ok: false,
-      message: "\uAE30\uC900 \uBD80\uBAA8 \uC815\uBCF4\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      message: "기준 부모 정보를 찾지 못했습니다.",
     };
   }
 
@@ -125,10 +144,17 @@ export async function addChildAction(
     .returns<Person[]>();
 
   if (existingPersonsError) {
-    console.error("[person write] child existing persons lookup failed", existingPersonsError.message);
+    console.error("[person write] child existing persons lookup failed", {
+      parentId,
+      branchCode: parentPerson.branch_code,
+      code: existingPersonsError.code,
+      message: existingPersonsError.message,
+      details: existingPersonsError.details,
+      hint: existingPersonsError.hint,
+    });
     return {
       ok: false,
-      message: "\uB4F1\uB85D \uAE30\uC900 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      message: buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError),
     };
   }
 
@@ -139,6 +165,16 @@ export async function addChildAction(
     actorUserId: user.id,
   });
 
+  console.info("[person write] child draft", {
+    parentId,
+    generation_depth: personDraft.generation_depth,
+    branch_code: personDraft.branch_code,
+    internal_code: personDraft.internal_code,
+    family_role_type: personDraft.family_role_type,
+    birth_order: personDraft.birth_order,
+    draft: personDraft,
+  });
+
   const { data: insertedPerson, error: insertPersonError } = await supabase
     .from("persons")
     .insert(personDraft)
@@ -146,10 +182,24 @@ export async function addChildAction(
     .maybeSingle<Person>();
 
   if (insertPersonError || !insertedPerson) {
-    console.error("[person write] child insert failed", insertPersonError?.message);
+    console.error("[person write] child person insert failed", {
+      parentId,
+      code: insertPersonError?.code ?? null,
+      message: insertPersonError?.message ?? "inserted person missing",
+      details: insertPersonError?.details ?? null,
+      hint: insertPersonError?.hint ?? null,
+      generation_depth: personDraft.generation_depth,
+      branch_code: personDraft.branch_code,
+      internal_code: personDraft.internal_code,
+      relation_type: "parent",
+      draft: personDraft,
+    });
+
     return {
       ok: false,
-      message: "\uC790\uB140 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+      message: insertPersonError
+        ? buildWriteFailureMessage("사람 등록", insertPersonError)
+        : "사람 등록 후 응답에서 새 person id를 받지 못했습니다.",
     };
   }
 
@@ -159,17 +209,45 @@ export async function addChildAction(
     relationType: "parent",
     actorUserId: user.id,
   });
+
+  console.info("[person write] child relationship draft", {
+    parentId,
+    newPersonId: insertedPerson.id,
+    relation_type: relationshipDraft.relation_type,
+    draft: relationshipDraft,
+  });
+
   const { error: relationshipError } = await supabase
     .from("relationships")
     .insert(relationshipDraft);
 
   if (relationshipError) {
-    console.error("[person write] child relationship insert failed", relationshipError.message);
-    await supabase.from("persons").delete().eq("id", insertedPerson.id);
+    console.error("[person write] child relationship insert failed", {
+      parentId,
+      newPersonId: insertedPerson.id,
+      code: relationshipError.code,
+      message: relationshipError.message,
+      details: relationshipError.details,
+      hint: relationshipError.hint,
+      relation_type: relationshipDraft.relation_type,
+      draft: relationshipDraft,
+    });
+
+    const rollbackResult = await supabase.from("persons").delete().eq("id", insertedPerson.id);
+
+    if (rollbackResult.error) {
+      console.error("[person write] child rollback failed", {
+        insertedPersonId: insertedPerson.id,
+        code: rollbackResult.error.code,
+        message: rollbackResult.error.message,
+        details: rollbackResult.error.details,
+        hint: rollbackResult.error.hint,
+      });
+    }
 
     return {
       ok: false,
-      message: "\uC790\uB140 \uAD00\uACC4 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+      message: buildWriteFailureMessage("관계 등록", relationshipError),
     };
   }
 
@@ -177,7 +255,7 @@ export async function addChildAction(
 
   return {
     ok: true,
-    message: "\uC790\uB140\uB97C \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.",
+    message: "자녀를 등록했습니다.",
     personId: insertedPerson.id,
   };
 }
@@ -196,15 +274,14 @@ export async function addSpouseAction(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const authResult = await supabase.auth.getUser();
+  const user = authResult.data.user;
 
-  if (userError || !user) {
+  if (authResult.error || !user) {
+    console.error("[person write] spouse auth failed", authResult.error?.message ?? "no user");
     return {
       ok: false,
-      message: "\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+      message: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
     };
   }
 
@@ -215,9 +292,13 @@ export async function addSpouseAction(
     .maybeSingle<Person>();
 
   if (targetPersonError || !targetPerson) {
+    console.error("[person write] spouse target lookup failed", {
+      targetPersonId,
+      error: targetPersonError?.message ?? "target not found",
+    });
     return {
       ok: false,
-      message: "\uAE30\uC900 \uBC30\uC6B0\uC790 \uB300\uC0C1 \uC815\uBCF4\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      message: "기준 배우자 대상 정보를 찾지 못했습니다.",
     };
   }
 
@@ -233,19 +314,22 @@ export async function addSpouseAction(
 
   if (existingPersonsError || existingRelationshipsError) {
     console.error("[person write] spouse context lookup failed", {
-      existingPersonsError: existingPersonsError?.message,
-      existingRelationshipsError: existingRelationshipsError?.message,
+      targetPersonId,
+      existingPersonsError: serializeSupabaseError(existingPersonsError),
+      existingRelationshipsError: serializeSupabaseError(existingRelationshipsError),
     });
     return {
       ok: false,
-      message: "\uB4F1\uB85D \uAE30\uC900 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      message:
+        buildWriteFailureMessage("등록 기준 데이터 조회", existingPersonsError) ??
+        buildWriteFailureMessage("관계 데이터 조회", existingRelationshipsError),
     };
   }
 
   if (hasSpouseRelationship(targetPerson.id, existingRelationships ?? [])) {
     return {
       ok: false,
-      message: "\uC774\uBBF8 \uBC30\uC6B0\uC790 \uAD00\uACC4\uAC00 \uB4F1\uB85D\uB41C \uAC00\uAD6C\uC785\uB2C8\uB2E4.",
+      message: "이미 배우자 관계가 등록된 가구입니다.",
     };
   }
 
@@ -255,6 +339,16 @@ export async function addSpouseAction(
     values,
     actorUserId: user.id,
   });
+
+  console.info("[person write] spouse draft", {
+    targetPersonId,
+    generation_depth: personDraft.generation_depth,
+    branch_code: personDraft.branch_code,
+    internal_code: personDraft.internal_code,
+    family_role_type: personDraft.family_role_type,
+    draft: personDraft,
+  });
+
   const { data: insertedPerson, error: insertPersonError } = await supabase
     .from("persons")
     .insert(personDraft)
@@ -262,10 +356,24 @@ export async function addSpouseAction(
     .maybeSingle<Person>();
 
   if (insertPersonError || !insertedPerson) {
-    console.error("[person write] spouse insert failed", insertPersonError?.message);
+    console.error("[person write] spouse person insert failed", {
+      targetPersonId,
+      code: insertPersonError?.code ?? null,
+      message: insertPersonError?.message ?? "inserted person missing",
+      details: insertPersonError?.details ?? null,
+      hint: insertPersonError?.hint ?? null,
+      generation_depth: personDraft.generation_depth,
+      branch_code: personDraft.branch_code,
+      internal_code: personDraft.internal_code,
+      relation_type: "spouse",
+      draft: personDraft,
+    });
+
     return {
       ok: false,
-      message: "\uBC30\uC6B0\uC790 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+      message: insertPersonError
+        ? buildWriteFailureMessage("사람 등록", insertPersonError)
+        : "사람 등록 후 응답에서 새 person id를 받지 못했습니다.",
     };
   }
 
@@ -275,17 +383,45 @@ export async function addSpouseAction(
     relationType: "spouse",
     actorUserId: user.id,
   });
+
+  console.info("[person write] spouse relationship draft", {
+    targetPersonId,
+    newPersonId: insertedPerson.id,
+    relation_type: relationshipDraft.relation_type,
+    draft: relationshipDraft,
+  });
+
   const { error: relationshipError } = await supabase
     .from("relationships")
     .insert(relationshipDraft);
 
   if (relationshipError) {
-    console.error("[person write] spouse relationship insert failed", relationshipError.message);
-    await supabase.from("persons").delete().eq("id", insertedPerson.id);
+    console.error("[person write] spouse relationship insert failed", {
+      targetPersonId,
+      newPersonId: insertedPerson.id,
+      code: relationshipError.code,
+      message: relationshipError.message,
+      details: relationshipError.details,
+      hint: relationshipError.hint,
+      relation_type: relationshipDraft.relation_type,
+      draft: relationshipDraft,
+    });
+
+    const rollbackResult = await supabase.from("persons").delete().eq("id", insertedPerson.id);
+
+    if (rollbackResult.error) {
+      console.error("[person write] spouse rollback failed", {
+        insertedPersonId: insertedPerson.id,
+        code: rollbackResult.error.code,
+        message: rollbackResult.error.message,
+        details: rollbackResult.error.details,
+        hint: rollbackResult.error.hint,
+      });
+    }
 
     return {
       ok: false,
-      message: "\uBC30\uC6B0\uC790 \uAD00\uACC4 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+      message: buildWriteFailureMessage("관계 등록", relationshipError),
     };
   }
 
@@ -293,7 +429,7 @@ export async function addSpouseAction(
 
   return {
     ok: true,
-    message: "\uBC30\uC6B0\uC790\uB97C \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.",
+    message: "배우자를 등록했습니다.",
     personId: insertedPerson.id,
   };
 }
@@ -326,4 +462,47 @@ function revalidateFamilyPaths() {
   PATHS_TO_REVALIDATE.forEach((path) => {
     revalidatePath(path);
   });
+}
+
+function buildWriteFailureMessage(
+  stage: string,
+  error:
+    | {
+        code?: string | null;
+        message: string;
+        details?: string | null;
+        hint?: string | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!error) {
+    return `${stage} 중 알 수 없는 오류가 발생했습니다.`;
+  }
+
+  const reason = [error.message, error.details, error.hint].filter(Boolean).join(" / ");
+  return `${stage} 실패: ${reason}`;
+}
+
+function serializeSupabaseError(
+  error:
+    | {
+        code?: string | null;
+        message: string;
+        details?: string | null;
+        hint?: string | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!error) {
+    return null;
+  }
+
+  return {
+    code: error.code ?? null,
+    message: error.message,
+    details: error.details ?? null,
+    hint: error.hint ?? null,
+  };
 }
