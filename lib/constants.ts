@@ -6,14 +6,14 @@ export const INTERNAL_EMAIL_DOMAIN = "family.com";
 
 export const BRANCH_OPTIONS: Array<{ value: BranchCode; label: string }> = [
   { value: "ROOT", label: "공통/본가" },
-  { value: "BR01", label: "김성안 가정" },
-  { value: "BR02", label: "김성록 가정" },
-  { value: "BR03", label: "김성학 가정" },
-  { value: "BR04", label: "김성춘 가정" },
-  { value: "BR05", label: "김성옥 가정" },
-  { value: "BR06", label: "김성달 가정" },
-  { value: "BR07", label: "김성복 가정" },
-  { value: "BR08", label: "김성천 가정" },
+  { value: "BR01", label: "김성안" },
+  { value: "BR02", label: "김성록" },
+  { value: "BR03", label: "김성학" },
+  { value: "BR04", label: "김옥자" },
+  { value: "BR05", label: "김성호" },
+  { value: "BR06", label: "김성원" },
+  { value: "BR07", label: "김춘래" },
+  { value: "BR08", label: "김선자" },
 ];
 
 export const FAMILY_ROLE_OPTIONS: Array<{
