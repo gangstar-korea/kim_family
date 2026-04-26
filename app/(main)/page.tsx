@@ -1,7 +1,5 @@
-import { FamilyListTab } from "@/components/family/family-list-tab";
 import { FamilyTreeTab } from "@/components/family/family-tree-tab";
 import { PageContainer } from "@/components/layout/page-container";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { getFamilyGraphData } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -9,9 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 const TEXT = {
   title: "\uAC00\uC871 \uACF5\uAC04",
   description:
-    "\uAC00\uC871 \uACC4\uCE35\uB3C4\uB294 \uC120\uD0DD\uD55C \uC904\uAE30\uB97C \uB530\uB77C \uC624\uB978\uCABD\uC73C\uB85C \uD655\uC7A5\uB418\uACE0, \uAC00\uC871 \uBAA9\uB85D\uC5D0\uC11C\uB294 \uC138\uB300\uBCC4 \uBD80\uBD80 \uB2E8\uC704 \uCE74\uB4DC \uB514\uB809\uD1A0\uB9AC\uB97C \uBCFC \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
-  treeTab: "\uAC00\uC871 \uACC4\uCE35\uB3C4",
-  listTab: "\uAC00\uC871 \uBAA9\uB85D",
+    "\uCD5C\uC0C1\uC704 \uAC00\uAD6C\uC5D0\uC11C \uC2DC\uC791\uD574 \uC120\uD0DD\uD55C \uC778\uBB3C\uC758 \uC790\uB140 \uAC00\uC9C0\uB97C \uC624\uB978\uCABD\uC73C\uB85C \uD655\uC7A5\uD558\uB294 \uD0D0\uC0C9\uD615 \uAC00\uACC4\uB3C4\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
 };
 
 export default async function HomePage() {
@@ -39,18 +35,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[360px]">
-          <TabsTrigger value="tree">{TEXT.treeTab}</TabsTrigger>
-          <TabsTrigger value="list">{TEXT.listTab}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="tree">
-          <FamilyTreeTab data={familyGraphData} />
-        </TabsContent>
-        <TabsContent value="list">
-          <FamilyListTab data={familyGraphData} />
-        </TabsContent>
-      </Tabs>
+      <FamilyTreeTab data={familyGraphData} />
     </PageContainer>
   );
 }
