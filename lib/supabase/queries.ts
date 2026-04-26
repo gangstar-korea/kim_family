@@ -1,5 +1,6 @@
 import type {
   BranchCode,
+  CurrentApprovalState,
   EditRequest,
   EntityId,
   FamilyGraphData,
@@ -7,7 +8,6 @@ import type {
   Person,
   Relationship,
   UserProfile,
-  CurrentApprovalState,
 } from "@/lib/types";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -55,7 +55,13 @@ export async function getCurrentUserJoinRequest(supabase: SupabaseServerClient) 
     .maybeSingle<JoinRequest>();
 
   if (error) {
-    throw error;
+    console.error("[approval] current join request lookup failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
   }
 
   return data;
@@ -64,27 +70,18 @@ export async function getCurrentUserJoinRequest(supabase: SupabaseServerClient) 
 export async function getCurrentApprovalState(
   supabase: SupabaseServerClient,
 ): Promise<CurrentApprovalState | null> {
-  const [profile, latestJoinRequest] = await Promise.all([
-    getCurrentUserProfile(supabase),
-    getCurrentUserJoinRequest(supabase),
-  ]);
+  const profile = await getCurrentUserProfile(supabase);
 
-  if (!profile && !latestJoinRequest) {
+  if (!profile) {
     return null;
   }
 
-  if (profile?.status === "approved") {
-    return {
-      profile,
-      latestJoinRequest,
-      status: "approved",
-    };
-  }
+  const latestJoinRequest = await getCurrentUserJoinRequest(supabase);
 
   return {
     profile,
     latestJoinRequest,
-    status: profile?.status ?? latestJoinRequest?.status ?? "pending",
+    status: profile.status ?? latestJoinRequest?.status ?? "pending",
   };
 }
 
