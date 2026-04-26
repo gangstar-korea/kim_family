@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Info } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { PersonDetailSheet } from "@/components/family/person-detail-sheet";
 import type {
@@ -323,35 +323,34 @@ function TreePersonButton({
   return (
     <div
       className={cn(
-        "flex min-h-[76px] rounded-lg border",
+        "relative flex min-h-[76px] rounded-lg border",
         role === "primary" ? "border-primary/20 bg-primary/5" : "border-border/80 bg-background",
         !person.is_alive && "bg-muted/50 text-muted-foreground",
       )}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col justify-center px-3.5 py-2.5 text-left"
+        className="flex min-w-0 flex-1 flex-col justify-center px-3.5 py-2.5 pr-9 text-left"
       >
-        <span className="break-keep text-sm font-bold leading-5">
-          {person.full_name}
-        </span>
-        {!person.is_alive ? (
-          <span className="mt-2 inline-flex w-fit rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-            {TEXT.deceased}
+        <div className="flex min-h-[40px] items-start">
+          <span className="break-keep text-sm font-bold leading-5">
+            {person.full_name}
           </span>
-        ) : null}
+        </div>
       </div>
+      {!person.is_alive ? (
+        <span className="absolute right-9 top-2 inline-flex rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          {TEXT.deceased}
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onSelect(person);
         }}
-        className="inline-flex w-8 shrink-0 items-start justify-center rounded-r-lg border-l border-border/70 pt-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex w-10 shrink-0 items-center justify-center rounded-r-lg border-l border-border/70 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Info className="h-3.5 w-3.5" aria-hidden />
-        <span className="sr-only">
-          {person.full_name} {TEXT.detail}
-        </span>
+        {TEXT.detail}
       </button>
     </div>
   );
