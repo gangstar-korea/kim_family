@@ -5,8 +5,7 @@ import type {
   PersonFormValues,
 } from "@/lib/types";
 
-const DEFAULT_INTERNAL_CODE_PREFIX = "PERSON-";
-const DEFAULT_CODE_WIDTH = 2;
+const DEFAULT_FAMILY_CODE = "KYS";
 
 type PersonInsertDraft = Omit<
   Person,
@@ -46,8 +45,14 @@ type NormalizedPersonFormValues = {
   phone: string | null;
   address: string | null;
   memo: string | null;
-  region: string | null;
   birth_order: string;
+};
+
+type ParsedBloodInternalCode = {
+  familyCode: string;
+  generationDepth: number;
+  branchCode: BranchCode;
+  sequence: number;
 };
 
 export function createEmptyPersonFormValues(): PersonFormValues {
@@ -106,11 +111,11 @@ export function validatePersonFormValues(
     return "이름은 필수입니다.";
   }
 
+  const birthDateInput = joinDateParts(values.birth_year, values.birth_month, values.birth_day);
+
   if (!values.birth_calendar_type) {
     return "달력 구분을 선택해 주세요.";
   }
-
-  const birthDateInput = joinDateParts(values.birth_year, values.birth_month, values.birth_day);
 
   if (hasAnyBirthDatePart(values) && !birthDateInput) {
     return "생년월일은 연도, 월, 일을 모두 숫자로 입력해 주세요.";
@@ -186,12 +191,11 @@ export function buildChildDraft({
     branchCode,
     familyRoleType: "blood",
     birthOrder: parseBirthOrder(normalized.birth_order),
-    internalCode: computeNextInternalCode({
+    internalCode: computeNextBloodInternalCode({
       existingPersons,
-      branchCode,
       generationDepth,
-      familyRoleType: "blood",
-      preferredSeedCode: parent.internal_code,
+      branchCode,
+      preferredSourceCode: parent.internal_code,
     }),
   });
 }
@@ -207,6 +211,7 @@ export function buildSpouseDraft({
   const generationDepth =
     typeof targetPerson.generation_depth === "number" ? targetPerson.generation_depth : null;
   const branchCode = computeBranchCodeForSpouse(targetPerson);
+  const bloodInternalCode = resolveBloodInternalCode(targetPerson);
 
   return buildBasePersonDraft({
     values: normalized,
@@ -216,12 +221,9 @@ export function buildSpouseDraft({
     branchCode,
     familyRoleType: "spouse",
     birthOrder: null,
-    internalCode: computeNextInternalCode({
+    internalCode: computeSpouseInternalCode({
+      bloodInternalCode,
       existingPersons,
-      branchCode,
-      generationDepth,
-      familyRoleType: "spouse",
-      preferredSeedCode: targetPerson.internal_code,
     }),
   });
 }
@@ -234,26 +236,47 @@ export function computeBranchCodeForSpouse(targetPerson: Person): BranchCode {
   return targetPerson.branch_code;
 }
 
-export function computeNextInternalCode(params: {
+export function computeNextBloodInternalCode(params: {
   existingPersons: Person[];
-  branchCode: BranchCode;
   generationDepth: number | null;
-  familyRoleType: FamilyRoleType;
-  preferredSeedCode?: string | null;
+  branchCode: BranchCode;
+  preferredSourceCode?: string | null;
 }) {
-  const comparablePeople = params.existingPersons.filter(
-    (person) =>
-      person.branch_code === params.branchCode &&
-      person.generation_depth === params.generationDepth &&
-      person.family_role_type === params.familyRoleType &&
-      Boolean(person.internal_code),
-  );
-  // TODO: Confirm the production internal_code rule with more branch samples.
-  // For now, follow the most common existing prefix in the same branch/generation/role.
-  const prefixInfo = pickInternalCodePrefix(comparablePeople, params.preferredSeedCode);
-  const nextSequence = findNextSequence(comparablePeople, prefixInfo.prefix);
+  const familyCode = extractFamilyCode(params.preferredSourceCode, params.existingPersons);
+  const nextSequence = computeNextBloodSequence({
+    existingPersons: params.existingPersons,
+    familyCode,
+    generationDepth: params.generationDepth,
+    branchCode: params.branchCode,
+  });
 
-  return `${prefixInfo.prefix}${String(nextSequence).padStart(prefixInfo.width, "0")}`;
+  return `${familyCode}-${params.generationDepth ?? 0}-${params.branchCode}-${String(nextSequence).padStart(3, "0")}`;
+}
+
+export function computeSpouseInternalCode(params: {
+  bloodInternalCode: string;
+  existingPersons: Person[];
+}) {
+  const spouseInternalCode = `${params.bloodInternalCode}s`;
+
+  if (
+    params.existingPersons.some((person) => person.internal_code === spouseInternalCode)
+  ) {
+    throw new Error(`배우자 internal_code 중복: ${spouseInternalCode}`);
+  }
+
+  return spouseInternalCode;
+}
+
+export function incrementBloodInternalCode(internalCode: string) {
+  const matched = internalCode.match(/^(.*-)(\d{3})$/);
+
+  if (!matched) {
+    throw new Error(`혈족 internal_code 증가 실패: ${internalCode}`);
+  }
+
+  const nextSequence = Number(matched[2]) + 1;
+  return `${matched[1]}${String(nextSequence).padStart(3, "0")}`;
 }
 
 function buildBasePersonDraft(params: {
@@ -316,8 +339,6 @@ function normalizeFormValues(values: PersonFormValues): NormalizedPersonFormValu
     birth_day: birthDay,
     birth_date_solar: birthCalendarType === "solar" ? birthDateInput : null,
     birth_date_lunar: birthCalendarType === "lunar" ? birthDateInput : null,
-    // birth_date is still the shared display/sort field used across the current app.
-    // Keep it aligned with the active calendar input until a separate normalized rule exists.
     birth_date: birthDateInput,
     is_lunar_leap_month: birthCalendarType === "lunar" ? values.is_lunar_leap_month : false,
     is_alive: Boolean(values.is_alive),
@@ -325,7 +346,6 @@ function normalizeFormValues(values: PersonFormValues): NormalizedPersonFormValu
     phone: normalizeOptionalText(values.phone),
     address: joinAddressParts(values.address_base, values.address_detail),
     memo: normalizeOptionalText(values.memo),
-    region: null,
     birth_order: values.birth_order.trim(),
   };
 }
@@ -352,54 +372,23 @@ function parseBirthOrder(value: string) {
   return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
 }
 
-function pickInternalCodePrefix(existingPeople: Person[], preferredSeedCode?: string | null) {
-  const prefixCounter = new Map<string, { count: number; width: number }>();
-
-  existingPeople.forEach((person) => {
-    const parts = splitInternalCode(person.internal_code);
-    const current = prefixCounter.get(parts.prefix);
-
-    prefixCounter.set(parts.prefix, {
-      count: (current?.count ?? 0) + 1,
-      width: Math.max(current?.width ?? 0, parts.width),
-    });
-  });
-
-  const bestExistingPrefix = [...prefixCounter.entries()].sort((a, b) => {
-    if (b[1].count !== a[1].count) {
-      return b[1].count - a[1].count;
-    }
-
-    return b[1].width - a[1].width;
-  })[0];
-
-  if (bestExistingPrefix) {
-    return {
-      prefix: bestExistingPrefix[0],
-      width: Math.max(bestExistingPrefix[1].width, DEFAULT_CODE_WIDTH),
-    };
-  }
-
-  if (preferredSeedCode) {
-    const preferredParts = splitInternalCode(preferredSeedCode);
-
-    return {
-      prefix: preferredParts.prefix,
-      width: Math.max(preferredParts.width, DEFAULT_CODE_WIDTH),
-    };
-  }
-
-  return {
-    prefix: DEFAULT_INTERNAL_CODE_PREFIX,
-    width: DEFAULT_CODE_WIDTH,
-  };
-}
-
-function findNextSequence(existingPeople: Person[], prefix: string) {
-  const sequences = existingPeople
-    .map((person) => splitInternalCode(person.internal_code))
-    .filter((parts) => parts.prefix === prefix && parts.sequence !== null)
-    .map((parts) => parts.sequence as number);
+function computeNextBloodSequence(params: {
+  existingPersons: Person[];
+  familyCode: string;
+  generationDepth: number | null;
+  branchCode: BranchCode;
+}) {
+  const sequences = params.existingPersons
+    .filter((person) => person.family_role_type === "blood")
+    .map((person) => parseBloodInternalCode(person.internal_code))
+    .filter((parsed): parsed is ParsedBloodInternalCode => Boolean(parsed))
+    .filter(
+      (parsed) =>
+        parsed.familyCode === params.familyCode &&
+        parsed.generationDepth === (params.generationDepth ?? 0) &&
+        parsed.branchCode === params.branchCode,
+    )
+    .map((parsed) => parsed.sequence);
 
   if (sequences.length === 0) {
     return 1;
@@ -408,22 +397,52 @@ function findNextSequence(existingPeople: Person[], prefix: string) {
   return Math.max(...sequences) + 1;
 }
 
-function splitInternalCode(code: string) {
-  const trimmedCode = code.trim();
-  const matched = trimmedCode.match(/^(.*?)(\d+)$/);
+function extractFamilyCode(preferredSourceCode: string | null | undefined, existingPersons: Person[]) {
+  const parsedPreferred = preferredSourceCode
+    ? parseBloodInternalCode(stripSpouseSuffix(preferredSourceCode))
+    : null;
+
+  if (parsedPreferred) {
+    return parsedPreferred.familyCode;
+  }
+
+  const parsedExisting = existingPersons
+    .map((person) => parseBloodInternalCode(person.internal_code))
+    .find((parsed): parsed is ParsedBloodInternalCode => Boolean(parsed));
+
+  return parsedExisting?.familyCode ?? DEFAULT_FAMILY_CODE;
+}
+
+function resolveBloodInternalCode(person: Person) {
+  if (person.family_role_type !== "blood") {
+    throw new Error("배우자 추가는 blood person 기준으로만 가능합니다.");
+  }
+
+  const baseInternalCode = stripSpouseSuffix(person.internal_code);
+
+  if (!parseBloodInternalCode(baseInternalCode)) {
+    throw new Error(`혈족 internal_code 형식이 올바르지 않습니다: ${person.internal_code}`);
+  }
+
+  return baseInternalCode;
+}
+
+function stripSpouseSuffix(internalCode: string) {
+  return internalCode.endsWith("s") ? internalCode.slice(0, -1) : internalCode;
+}
+
+function parseBloodInternalCode(internalCode: string): ParsedBloodInternalCode | null {
+  const matched = internalCode.match(/^([A-Z]+)-(\d+)-(ROOT|BR0[1-8])-(\d{3})$/);
 
   if (!matched) {
-    return {
-      prefix: trimmedCode ? `${trimmedCode}-` : DEFAULT_INTERNAL_CODE_PREFIX,
-      sequence: null,
-      width: DEFAULT_CODE_WIDTH,
-    };
+    return null;
   }
 
   return {
-    prefix: matched[1],
-    sequence: Number(matched[2]),
-    width: matched[2].length,
+    familyCode: matched[1],
+    generationDepth: Number(matched[2]),
+    branchCode: matched[3] as BranchCode,
+    sequence: Number(matched[4]),
   };
 }
 

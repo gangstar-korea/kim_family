@@ -6,6 +6,7 @@ import {
   buildChildDraft,
   buildPersonUpdatePayload,
   buildSpouseDraft,
+  incrementBloodInternalCode,
   validatePersonFormValues,
 } from "@/lib/family/person-write-adapter";
 import { createClient } from "@/lib/supabase/server";
@@ -140,7 +141,6 @@ export async function addChildAction(
   const { data: existingPersons, error: existingPersonsError } = await supabase
     .from("persons")
     .select("*")
-    .eq("branch_code", parentPerson.branch_code)
     .returns<Person[]>();
 
   if (existingPersonsError) {
@@ -158,12 +158,27 @@ export async function addChildAction(
     };
   }
 
-  const personDraft = buildChildDraft({
-    parent: parentPerson,
-    existingPersons: existingPersons ?? [],
-    values,
-    actorUserId: user.id,
-  });
+  let personDraft;
+
+  try {
+    personDraft = buildChildDraft({
+      parent: parentPerson,
+      existingPersons: existingPersons ?? [],
+      values,
+      actorUserId: user.id,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "child draft build failed";
+    console.error("[person write] child draft build failed", {
+      parentId,
+      message,
+    });
+
+    return {
+      ok: false,
+      message: `자녀 등록 준비 실패: ${message}`,
+    };
+  }
 
   console.info("[person write] child draft", {
     parentId,
@@ -175,11 +190,13 @@ export async function addChildAction(
     draft: personDraft,
   });
 
-  const { data: insertedPerson, error: insertPersonError } = await supabase
-    .from("persons")
-    .insert(personDraft)
-    .select("*")
-    .maybeSingle<Person>();
+  const childInsertResult = await insertBloodPersonWithRetries(supabase, personDraft, {
+    context: "child",
+    referenceId: parentId,
+  });
+  const insertedPerson = childInsertResult.data;
+  const insertPersonError = childInsertResult.error;
+  personDraft = childInsertResult.draft;
 
   if (insertPersonError || !insertedPerson) {
     console.error("[person write] child person insert failed", {
@@ -305,7 +322,6 @@ export async function addSpouseAction(
   const { data: existingPersons, error: existingPersonsError } = await supabase
     .from("persons")
     .select("*")
-    .eq("branch_code", targetPerson.branch_code)
     .returns<Person[]>();
   const { data: existingRelationships, error: existingRelationshipsError } = await supabase
     .from("relationships")
@@ -333,12 +349,27 @@ export async function addSpouseAction(
     };
   }
 
-  const personDraft = buildSpouseDraft({
-    targetPerson,
-    existingPersons: existingPersons ?? [],
-    values,
-    actorUserId: user.id,
-  });
+  let personDraft;
+
+  try {
+    personDraft = buildSpouseDraft({
+      targetPerson,
+      existingPersons: existingPersons ?? [],
+      values,
+      actorUserId: user.id,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "spouse draft build failed";
+    console.error("[person write] spouse draft build failed", {
+      targetPersonId,
+      message,
+    });
+
+    return {
+      ok: false,
+      message: `배우자 등록 준비 실패: ${message}`,
+    };
+  }
 
   console.info("[person write] spouse draft", {
     targetPersonId,
@@ -372,7 +403,9 @@ export async function addSpouseAction(
     return {
       ok: false,
       message: insertPersonError
-        ? buildWriteFailureMessage("사람 등록", insertPersonError)
+        ? isDuplicateInternalCodeError(insertPersonError)
+          ? "배우자 internal_code가 이미 존재합니다. 기존 배우자 등록 여부를 확인해 주세요."
+          : buildWriteFailureMessage("사람 등록", insertPersonError)
         : "사람 등록 후 응답에서 새 person id를 받지 못했습니다.",
     };
   }
@@ -464,6 +497,76 @@ function revalidateFamilyPaths() {
   });
 }
 
+type PersonInsertDraft = Omit<Person, "id">;
+
+async function insertBloodPersonWithRetries(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  initialDraft: PersonInsertDraft,
+  options: {
+    context: "child";
+    referenceId: string;
+  },
+) {
+  let currentDraft = {
+    ...initialDraft,
+  };
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const result = await supabase
+      .from("persons")
+      .insert(currentDraft)
+      .select("*")
+      .maybeSingle<Person>();
+
+    if (!result.error && result.data) {
+      if (attempt > 0) {
+        console.info("[person write] blood internal_code retry succeeded", {
+          context: options.context,
+          referenceId: options.referenceId,
+          internal_code: currentDraft.internal_code,
+          attempt: attempt + 1,
+        });
+      }
+
+      return {
+        data: result.data,
+        error: null,
+        draft: currentDraft,
+      };
+    }
+
+    if (!isDuplicateInternalCodeError(result.error)) {
+      return {
+        data: result.data ?? null,
+        error: result.error,
+        draft: currentDraft,
+      };
+    }
+
+    console.warn("[person write] blood internal_code duplicate, retrying", {
+      context: options.context,
+      referenceId: options.referenceId,
+      internal_code: currentDraft.internal_code,
+      attempt: attempt + 1,
+    });
+
+    currentDraft = {
+      ...currentDraft,
+      internal_code: incrementBloodInternalCode(currentDraft.internal_code),
+    };
+  }
+
+  return {
+    data: null,
+    error: {
+      message: "internal_code 재시도 한도를 초과했습니다.",
+      details: currentDraft.internal_code,
+      hint: "persons_internal_code_key",
+    },
+    draft: currentDraft,
+  };
+}
+
 function buildWriteFailureMessage(
   stage: string,
   error:
@@ -505,4 +608,26 @@ function serializeSupabaseError(
     details: error.details ?? null,
     hint: error.hint ?? null,
   };
+}
+
+function isDuplicateInternalCodeError(
+  error:
+    | {
+        code?: string | null;
+        message: string;
+        details?: string | null;
+        hint?: string | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!error) {
+    return false;
+  }
+
+  const joinedText = [error.code, error.message, error.details, error.hint]
+    .filter(Boolean)
+    .join(" ");
+
+  return joinedText.includes("persons_internal_code_key");
 }
