@@ -323,22 +323,22 @@ function TreePersonButton({
   return (
     <div
       className={cn(
-        "relative flex min-h-[76px] rounded-lg border",
+        "relative flex min-h-[84px] rounded-lg border",
         role === "primary" ? "border-primary/20 bg-primary/5" : "border-border/80 bg-background",
         !person.is_alive && "bg-muted/50 text-muted-foreground",
       )}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col justify-center px-3.5 py-2.5 pr-9 text-left"
+        className="flex min-w-0 flex-1 flex-col justify-start px-3.5 pb-2.5 pt-4 pr-10 text-left"
       >
-        <div className="flex min-h-[40px] items-start">
-          <span className="break-keep text-sm font-bold leading-5">
+        <div className="flex min-h-[40px] items-start pt-2">
+          <span className="break-keep text-base font-bold leading-6">
             {person.full_name}
           </span>
         </div>
       </div>
       {!person.is_alive ? (
-        <span className="absolute right-9 top-2 inline-flex rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+        <span className="absolute left-[calc(50%-20px)] top-2 inline-flex min-w-10 justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
           {TEXT.deceased}
         </span>
       ) : null}
@@ -348,7 +348,7 @@ function TreePersonButton({
           event.stopPropagation();
           onSelect(person);
         }}
-        className="inline-flex w-10 shrink-0 items-center justify-center rounded-r-lg border-l border-border/70 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex w-11 shrink-0 items-start justify-center rounded-r-lg border-l border-border/70 pt-6 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {TEXT.detail}
       </button>
