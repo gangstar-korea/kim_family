@@ -24,8 +24,6 @@ export type ApprovalAdminItem = {
     | "person_id"
     | "display_name"
     | "phone"
-    | "branch_code"
-    | "family_role_type"
     | "created_at"
   > | null;
   effectiveStatus: "pending" | "approved" | "rejected";
@@ -333,8 +331,8 @@ export async function getApprovalAdminItems(
       accountId: profile.id,
       displayName: profile.display_name ?? joinRequest?.display_name ?? "-",
       phone: profile.phone ?? joinRequest?.phone ?? "-",
-      branchCode: profile.branch_code ?? joinRequest?.branch_code ?? null,
-      familyRoleType: profile.family_role_type ?? joinRequest?.family_role_type ?? null,
+      branchCode: joinRequest?.branch_code ?? null,
+      familyRoleType: joinRequest?.family_role_type ?? null,
       createdAt: joinRequest?.created_at ?? profile.created_at,
     });
 
@@ -391,7 +389,7 @@ export async function getPendingEditRequests(supabase: SupabaseServerClient) {
 async function getApprovalProfiles(supabase: SupabaseServerClient) {
   const { data, error } = await supabase
     .from("user_profiles")
-    .select("id, role, status, person_id, display_name, phone, branch_code, family_role_type, created_at")
+    .select("id, role, status, person_id, display_name, phone, created_at")
     .returns<
       Array<
         Pick<
@@ -402,8 +400,6 @@ async function getApprovalProfiles(supabase: SupabaseServerClient) {
           | "person_id"
           | "display_name"
           | "phone"
-          | "branch_code"
-          | "family_role_type"
           | "created_at"
         >
       >
