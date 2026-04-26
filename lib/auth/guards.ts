@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import type { AppRole, UserProfile } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentApprovalState, getCurrentUserProfile } from "@/lib/supabase/queries";
+import { getCurrentUserProfile } from "@/lib/supabase/queries";
 
 export async function getAuthenticatedUser() {
   const supabase = await createClient();
@@ -45,26 +45,25 @@ export function hasRole(profile: UserProfile, roles: AppRole[]) {
 
 export async function requireApprovedProfile() {
   const supabase = await createClient();
-  const approvalState = await getCurrentApprovalState(supabase);
-  const fallbackProfile = approvalState?.profile ?? (await getCurrentUserProfile(supabase));
+  const profile = await getCurrentUserProfile(supabase);
 
-  if (!fallbackProfile) {
+  if (!profile) {
     redirect("/me");
   }
 
-  if (fallbackProfile.role === "super_admin") {
-    return fallbackProfile;
+  if (profile.role === "super_admin") {
+    return profile;
   }
 
-  if (approvalState?.status !== "approved" || fallbackProfile.status !== "approved") {
+  if (profile.status !== "approved") {
     redirect("/me");
   }
 
-  return fallbackProfile;
+  return profile;
 }
 
 export async function requireSuperAdminProfile() {
-  const profile = await requireApprovedProfile();
+  const profile = await requireUserProfile();
 
   if (profile.role !== "super_admin") {
     redirect("/");

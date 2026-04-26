@@ -1,7 +1,7 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
-import { getCurrentApprovalState } from "@/lib/supabase/queries";
+import { getCurrentUserProfile } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 
 const TEXT = {
@@ -16,9 +16,9 @@ const TEXT = {
 export default async function MePage() {
   await requireAuthenticatedUser();
   const supabase = await createClient();
-  const approvalState = await getCurrentApprovalState(supabase);
+  const profile = await getCurrentUserProfile(supabase);
 
-  if (approvalState?.profile?.role === "super_admin") {
+  if (profile?.role === "super_admin") {
     return (
       <PageContainer>
         <Card>
@@ -34,7 +34,7 @@ export default async function MePage() {
     );
   }
 
-  if (!approvalState || approvalState.status === "pending") {
+  if (!profile || profile.status === "pending") {
     return (
       <PageContainer>
         <Card>
@@ -50,7 +50,7 @@ export default async function MePage() {
     );
   }
 
-  if (approvalState.status === "rejected") {
+  if (profile.status === "rejected") {
     return (
       <PageContainer>
         <Card>
