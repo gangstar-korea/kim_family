@@ -38,31 +38,7 @@ export default async function AdminApprovalsPage({
 }: AdminApprovalsPageProps) {
   await requireSuperAdminProfile();
   const supabase = await createClient();
-  const approvalItems = (await getApprovalAdminItems(supabase)).map((item) => ({
-    ...item,
-    accountId:
-      "accountId" in item
-        ? item.accountId
-        : item.joinRequest?.user_id ?? item.profile?.id ?? "-",
-    displayName:
-      "displayName" in item
-        ? item.displayName
-        : item.profile?.display_name ?? item.joinRequest?.display_name ?? "-",
-    phone:
-      "phone" in item ? item.phone : item.profile?.phone ?? item.joinRequest?.phone ?? "-",
-    branchCode:
-      "branchCode" in item
-        ? item.branchCode
-        : item.profile?.branch_code ?? item.joinRequest?.branch_code ?? null,
-    familyRoleType:
-      "familyRoleType" in item
-        ? item.familyRoleType
-        : item.profile?.family_role_type ?? item.joinRequest?.family_role_type ?? null,
-    createdAt:
-      "createdAt" in item
-        ? item.createdAt
-        : item.joinRequest?.created_at ?? item.profile?.created_at ?? "",
-  }));
+  const approvalItems = await getApprovalAdminItems(supabase);
   const resolvedSearchParams = await searchParams;
   const feedback = getFeedbackMessage(resolvedSearchParams.result);
 
