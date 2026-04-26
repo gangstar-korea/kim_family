@@ -135,6 +135,58 @@ export async function rejectJoinRequestAction(joinRequestId: string): Promise<vo
   redirect("/admin/approvals?result=rejected");
 }
 
+export async function approveUserProfileAction(profileId: string): Promise<void> {
+  await requireSuperAdminProfile();
+  const supabase = await createClient();
+
+  const { error: profileUpdateError } = await supabase
+    .from("user_profiles")
+    .update({
+      status: "approved",
+    })
+    .eq("id", profileId);
+
+  if (profileUpdateError) {
+    console.error("[approval] user profile direct approve failed", {
+      profileId,
+      code: profileUpdateError.code,
+      message: profileUpdateError.message,
+      details: profileUpdateError.details,
+      hint: profileUpdateError.hint,
+    });
+    redirect("/admin/approvals?result=error");
+  }
+
+  revalidateApprovalPaths();
+  redirect("/admin/approvals?result=approved");
+}
+
+export async function rejectUserProfileAction(profileId: string): Promise<void> {
+  await requireSuperAdminProfile();
+  const supabase = await createClient();
+
+  const { error: profileUpdateError } = await supabase
+    .from("user_profiles")
+    .update({
+      status: "rejected",
+    })
+    .eq("id", profileId);
+
+  if (profileUpdateError) {
+    console.error("[approval] user profile direct reject failed", {
+      profileId,
+      code: profileUpdateError.code,
+      message: profileUpdateError.message,
+      details: profileUpdateError.details,
+      hint: profileUpdateError.hint,
+    });
+    redirect("/admin/approvals?result=error");
+  }
+
+  revalidateApprovalPaths();
+  redirect("/admin/approvals?result=rejected");
+}
+
 function revalidateApprovalPaths() {
   APPROVAL_PATHS.forEach((path) => revalidatePath(path));
 }
