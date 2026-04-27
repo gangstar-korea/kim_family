@@ -94,8 +94,8 @@ export function FamilyRelationshipTree({
 
   return (
     <>
-      <div className="overflow-x-auto pb-3">
-        <div className="flex min-w-max gap-3 px-1">
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain pb-3">
+        <div className="inline-flex min-w-max gap-3 px-1">
           {columns.map((column, columnIndex) => (
             <ExplorerColumn
               key={`${column.title}-${columnIndex}`}

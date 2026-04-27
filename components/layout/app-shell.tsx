@@ -7,7 +7,7 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="warm-surface min-h-screen pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="warm-surface min-h-screen overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       <AppHeader />
       {children}
       <BottomNav />

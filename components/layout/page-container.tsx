@@ -10,7 +10,7 @@ export function PageContainer({ children, className, size = "default" }: PageCon
   return (
     <main
       className={cn(
-        "mx-auto w-full px-4 py-5 md:px-6 md:py-8",
+        "mx-auto min-w-0 w-full overflow-x-hidden px-4 py-5 md:px-6 md:py-8",
         size === "default" ? "max-w-5xl" : "max-w-6xl",
         className,
       )}
