@@ -7,7 +7,7 @@ import type { FamilyGraphData, UserProfile } from "@/lib/types";
 const TEXT = {
   title: "가족 관계 중심 계층도",
   description:
-    "최상위 가구에서 시작해 선택한 인물의 자녀 가지를 오른쪽 컬럼으로 확장하는 탐색형 계층도입니다.",
+    "최상위 가구에서 시작해 선택한 줄기를 오른쪽 컬럼으로 확장해 보는 탐색형 계층도입니다.",
 };
 
 type FamilyTreeTabProps = {

@@ -19,7 +19,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       aria-label="하단 메뉴"
     >
-      <div className="mx-auto grid h-16 max-w-md grid-cols-2 px-2">
+      <div className="grid h-16 w-full grid-cols-2">
         {navItems.map((item) => {
           const active =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -33,7 +33,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-1 rounded-md text-xs font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 border-r border-border/60 text-xs font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-r-0",
                 active && "bg-primary/10 text-primary",
               )}
               aria-current={active ? "page" : undefined}

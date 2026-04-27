@@ -23,7 +23,7 @@ export function PersonSheetShell({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end bg-black/45 px-3 pb-3 pt-12 sm:items-center sm:justify-center sm:p-6">
+    <div className="fixed inset-0 z-[60] flex items-end bg-black/45 pt-10 sm:items-center sm:justify-center sm:p-6">
       <button
         type="button"
         aria-label="닫기"
@@ -33,7 +33,7 @@ export function PersonSheetShell({
       <section
         role="dialog"
         aria-modal="true"
-        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card px-4 pb-5 pt-4 shadow-xl sm:max-w-lg sm:rounded-2xl sm:px-5"
+        className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-border bg-card px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-xl sm:max-h-[88vh] sm:max-w-lg sm:rounded-2xl sm:px-5 sm:pb-5"
       >
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-muted sm:hidden" />
 

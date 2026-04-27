@@ -1,4 +1,5 @@
 import { FamilyTreeTab } from "@/components/family/family-tree-tab";
+import { MonthlyBirthdayBanner } from "@/components/family/monthly-birthday-banner";
 import { PageContainer } from "@/components/layout/page-container";
 import { requireApprovedProfile } from "@/lib/auth/guards";
 import { getCurrentUserProfile, getFamilyGraphData } from "@/lib/supabase/queries";
@@ -7,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 const TEXT = {
   title: "가족 공간",
   description:
-    "최상위 가구에서 시작해 선택한 인물의 자녀 가지를 오른쪽으로 확장하는 탐색형 가계도를 확인할 수 있습니다.",
+    "최상위 가구에서 시작해 선택한 줄기를 오른쪽으로 확장해 보는 탐색형 가계도입니다.",
 };
 
 export default async function HomePage() {
@@ -20,7 +21,11 @@ export default async function HomePage() {
   ]);
   const debug = familyGraphData.debug;
 
-  if (debug?.supabaseErrorMessage || debug?.personsErrorMessage || debug?.relationshipsErrorMessage) {
+  if (
+    debug?.supabaseErrorMessage ||
+    debug?.personsErrorMessage ||
+    debug?.relationshipsErrorMessage
+  ) {
     console.error("[family page] data load error", {
       supabaseErrorMessage: debug.supabaseErrorMessage,
       personsErrorMessage: debug.personsErrorMessage,
@@ -38,6 +43,8 @@ export default async function HomePage() {
           </p>
         </div>
       </section>
+
+      <MonthlyBirthdayBanner persons={familyGraphData.persons} />
 
       <FamilyTreeTab data={familyGraphData} currentUserProfile={currentUserProfile} />
     </PageContainer>

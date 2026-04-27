@@ -8,28 +8,27 @@ import { PersonAddSpouseSheet } from "@/components/family/person-add-spouse-shee
 import { PersonEditSheet } from "@/components/family/person-edit-sheet";
 import { Button } from "@/components/ui/button";
 import { formatKoreanMobilePhone } from "@/lib/auth/normalize-phone";
-import type { Person, PersonRelations, UserProfile } from "@/lib/types";
 import type { PersonActionPermissions } from "@/lib/family/permissions";
+import type { Person, PersonRelations, UserProfile } from "@/lib/types";
 
 const TEXT = {
-  close: "\uB2EB\uAE30",
-  title: "\uAC00\uC871 \uC0C1\uC138",
+  close: "닫기",
+  title: "가족 상세",
   noValue: "-",
-  birthDate: "\uC0DD\uB144\uC6D4\uC77C",
-  deceasedDate: "\uBCC4\uC138\uC77C",
-  phone: "\uC5F0\uB77D\uCC98",
-  address: "\uC8FC\uC18C",
-  memo: "\uBA54\uBAA8",
-  bornSuffix: "\uCD9C\uC0DD",
-  deceasedSuffix: "\uBCC4\uC138",
-  solar: "\uC591\uB825",
-  lunar: "\uC74C\uB825",
-  leapMonth: "\uC724\uB2EC",
-  edit: "\uC218\uC815",
-  addChild: "\uC790\uB140 \uCD94\uAC00",
-  addSpouse: "\uBC30\uC6B0\uC790 \uCD94\uAC00",
-  spouseExists:
-    "\uC774\uBBF8 \uBC30\uC6B0\uC790 \uAD00\uACC4\uAC00 \uB4F1\uB85D\uB41C \uAC00\uAD6C\uC785\uB2C8\uB2E4.",
+  birthDate: "생년월일",
+  deceasedDate: "별세일",
+  phone: "연락처",
+  address: "주소",
+  memo: "메모",
+  bornSuffix: "출생",
+  deceasedSuffix: "별세",
+  solar: "양력",
+  lunar: "음력",
+  leapMonth: "윤달",
+  edit: "수정",
+  addChild: "자녀 추가",
+  addSpouse: "배우자 추가",
+  spouseExists: "이미 배우자 관계가 등록된 가구입니다.",
 };
 
 export type PersonDetailSheetProps = {
@@ -49,7 +48,9 @@ export function PersonDetailSheet({
   currentUserProfile,
   permissions,
 }: PersonDetailSheetProps) {
-  const [activeSheet, setActiveSheet] = useState<"edit" | "child" | "spouse" | null>(null);
+  const [activeSheet, setActiveSheet] = useState<"edit" | "child" | "spouse" | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -78,7 +79,7 @@ export function PersonDetailSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-3 pb-3 pt-12 sm:items-center sm:justify-center sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-end bg-black/40 pt-10 sm:items-center sm:justify-center sm:p-6">
         <button
           type="button"
           className="absolute inset-0 cursor-default"
@@ -89,7 +90,7 @@ export function PersonDetailSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="person-detail-title"
-          className="relative max-h-[82vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card px-4 pb-5 pt-4 shadow-lg sm:max-w-md sm:rounded-2xl sm:px-5"
+          className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-border bg-card px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-lg sm:max-h-[82vh] sm:max-w-md sm:rounded-2xl sm:px-5 sm:pb-5"
         >
           <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-muted sm:hidden" />
 
@@ -203,7 +204,7 @@ function buildSummaryText(person: Person) {
       : `${birthDateDisplay} ${TEXT.bornSuffix}`;
 
   if (!person.is_alive && person.deceased_date) {
-    return `${birthText} \u00B7 ${person.deceased_date} ${TEXT.deceasedSuffix}`;
+    return `${birthText} · ${person.deceased_date} ${TEXT.deceasedSuffix}`;
   }
 
   return birthText;
