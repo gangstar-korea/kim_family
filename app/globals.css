@@ -32,10 +32,12 @@
 
   html {
     text-size-adjust: 100%;
+    overflow-x: hidden;
   }
 
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    overflow-x: hidden;
   }
 
   button,
