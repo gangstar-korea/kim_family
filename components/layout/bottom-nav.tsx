@@ -16,10 +16,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed bottom-0 left-0 z-40 w-[100dvw] max-w-[100dvw] overflow-hidden border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       aria-label="하단 메뉴"
     >
-      <div className="grid h-16 w-full grid-cols-2">
+      <div className="grid h-16 w-[100dvw] max-w-[100dvw] grid-cols-2 overflow-hidden">
         {navItems.map((item) => {
           const active =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -33,13 +33,13 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 border-r border-border/60 text-xs font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-r-0",
+                "flex min-w-0 items-center justify-center gap-2 overflow-hidden border-r border-border/60 px-3 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-r-0",
                 active && "bg-primary/10 text-primary",
               )}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-5 w-5" aria-hidden />
-              <span>{item.label}</span>
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className="truncate"> {item.label}</span>
             </Link>
           );
         })}
