@@ -94,22 +94,22 @@ export function FamilyRelationshipTree({
 
   return (
     <>
-      <div className="w-full min-w-0 overflow-hidden">
-        <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain pb-3">
-          <div className="inline-flex min-w-max gap-3 px-1">
-          {columns.map((column, columnIndex) => (
-            <ExplorerColumn
-              key={`${column.title}-${columnIndex}`}
-              ref={columnIndex === columns.length - 1 ? lastColumnRef : undefined}
-              title={column.title}
-              parentNode={column.parentNode}
-              nodes={column.nodes}
-              selectedNodeId={selectedPath[columnIndex] ?? null}
-              columnIndex={columnIndex}
-              onSelectNode={handleSelectNode}
-              onSelectPerson={setSelectedPerson}
-            />
-          ))}
+      <div className="min-w-0 max-w-full overflow-hidden [contain:inline-size]">
+        <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-3">
+          <div className="flex w-max min-w-full gap-3 px-1">
+            {columns.map((column, columnIndex) => (
+              <ExplorerColumn
+                key={`${column.title}-${columnIndex}`}
+                ref={columnIndex === columns.length - 1 ? lastColumnRef : undefined}
+                title={column.title}
+                parentNode={column.parentNode}
+                nodes={column.nodes}
+                selectedNodeId={selectedPath[columnIndex] ?? null}
+                columnIndex={columnIndex}
+                onSelectNode={handleSelectNode}
+                onSelectPerson={setSelectedPerson}
+              />
+            ))}
           </div>
         </div>
       </div>
