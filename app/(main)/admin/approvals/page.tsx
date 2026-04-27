@@ -49,7 +49,7 @@ export default async function AdminApprovalsPage({
   const feedback = getFeedbackMessage(resolvedSearchParams.result);
 
   return (
-    <PageContainer className="space-y-4">
+    <PageContainer className="space-y-4 pb-28 md:pb-8">
       <Card>
         <CardHeader>
           <CardTitle>{TEXT.title}</CardTitle>
