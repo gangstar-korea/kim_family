@@ -34,7 +34,7 @@ export function FamilyTreeTab({ data, currentUserProfile }: FamilyTreeTabProps) 
 
 function FamilyTreeStage({ tree }: { tree: ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4 shadow-sm md:p-5">
+    <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm md:p-5">
       <div className="space-y-2">
         <h3 className="text-lg font-bold">{TEXT.title}</h3>
         <p className="text-sm leading-6 text-muted-foreground">{TEXT.description}</p>

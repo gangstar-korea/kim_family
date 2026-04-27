@@ -79,7 +79,7 @@ export function PersonDetailSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-end bg-black/40 pt-10 sm:items-center sm:justify-center sm:p-6">
+      <div className="fixed inset-0 z-50 flex w-[100dvw] max-w-[100dvw] items-end overflow-x-hidden bg-black/40 pt-10 sm:items-center sm:justify-center sm:p-6">
         <button
           type="button"
           className="absolute inset-0 cursor-default"
@@ -90,7 +90,7 @@ export function PersonDetailSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="person-detail-title"
-          className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-border bg-card px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-lg sm:max-h-[82vh] sm:max-w-md sm:rounded-2xl sm:px-5 sm:pb-5"
+          className="relative max-h-[90dvh] w-full max-w-full overflow-x-hidden overflow-y-auto rounded-t-3xl border border-border bg-card px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-lg sm:max-h-[82vh] sm:max-w-md sm:rounded-2xl sm:px-5 sm:pb-5"
         >
           <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-muted sm:hidden" />
 
