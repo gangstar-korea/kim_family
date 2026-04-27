@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCheck, Home, UserRound, UsersRound } from "lucide-react";
+import { CheckCheck, Home, UsersRound } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "가족", icon: Home },
-  { href: "/me", label: "내 정보", icon: UserRound },
+  { href: "/", label: "가계도", icon: Home },
   { href: "/admin/approvals", label: "승인", icon: CheckCheck },
 ];
 
@@ -20,11 +19,14 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       aria-label="하단 메뉴"
     >
-      <div className="mx-auto grid h-16 max-w-md grid-cols-3 px-2">
+      <div className="mx-auto grid h-16 max-w-md grid-cols-2 px-2">
         {navItems.map((item) => {
           const active =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const Icon = item.icon === Home && pathname.startsWith("/family") ? UsersRound : item.icon;
+          const Icon =
+            item.icon === Home && pathname.startsWith("/family")
+              ? UsersRound
+              : item.icon;
 
           return (
             <Link
