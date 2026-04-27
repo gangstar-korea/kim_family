@@ -209,7 +209,7 @@ const ExplorerColumn = forwardRef<
   return (
     <section
       ref={ref}
-      className="w-[21rem] min-w-[21rem] shrink-0 rounded-lg border border-border bg-background p-3 shadow-sm"
+      className="w-[min(21rem,calc(100vw-2rem))] min-w-[min(21rem,calc(100vw-2rem))] shrink-0 rounded-lg border border-border bg-background p-3 shadow-sm"
     >
       <div className="mb-3 space-y-1">
         <p className="text-[11px] font-semibold text-muted-foreground">
