@@ -3,9 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { normalizePhoneNumber } from "@/lib/auth/normalize-phone";
 import { requireSuperAdminProfile } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import type { BranchCode, FamilyRoleType, JoinRequest, UserProfile } from "@/lib/types";
+import type {
+  BranchCode,
+  FamilyRoleType,
+  JoinRequest,
+  Person,
+  UserProfile,
+} from "@/lib/types";
 
 const APPROVAL_PATHS = ["/", "/me", "/admin/approvals"];
 
@@ -19,10 +26,22 @@ export async function approveJoinRequestAction(requesterUserId: string): Promise
   }
 
   const reviewedAt = new Date().toISOString();
+  const resolvedPersonId = await resolvePersonIdForApproval({
+    supabase,
+    requesterUserId,
+    applicantName: joinRequest.applicant_name,
+    applicantPhone: joinRequest.applicant_phone,
+    payload: joinRequest.payload,
+  });
+  const nextPayload = {
+    ...(joinRequest.payload ?? {}),
+    person_id: resolvedPersonId ?? joinRequest.payload?.person_id ?? null,
+  };
 
   const { error: joinUpdateError } = await supabase
     .from("join_requests")
     .update({
+      payload: nextPayload,
       status: "approved",
       reviewed_by: adminProfile.id,
       reviewed_at: reviewedAt,
@@ -46,6 +65,7 @@ export async function approveJoinRequestAction(requesterUserId: string): Promise
     .from("user_profiles")
     .update({
       status: "approved",
+      ...(resolvedPersonId ? { person_id: resolvedPersonId } : {}),
     })
     .eq("id", requesterUserId);
 
@@ -176,6 +196,18 @@ export async function approveUserProfileWithJoinRequestAction(
     redirect("/admin/approvals?result=error");
   }
 
+  const resolvedPersonId = await resolvePersonIdForApproval({
+    supabase,
+    requesterUserId: profile.id,
+    applicantName: profile.display_name,
+    applicantPhone: profile.phone,
+    payload: {
+      branch_code: branchCode,
+      family_role_type: familyRoleType,
+      person_id: profile.person_id ?? null,
+    },
+  });
+
   const joinRequestPayload = {
     requester_user_id: profile.id,
     request_type: "signup",
@@ -185,7 +217,7 @@ export async function approveUserProfileWithJoinRequestAction(
     payload: {
       branch_code: branchCode,
       family_role_type: familyRoleType,
-      person_id: profile.person_id ?? null,
+      person_id: resolvedPersonId ?? profile.person_id ?? null,
     },
     status: "approved" as const,
     reviewed_by: adminProfile.id,
@@ -210,6 +242,7 @@ export async function approveUserProfileWithJoinRequestAction(
     .from("user_profiles")
     .update({
       status: "approved",
+      ...(resolvedPersonId ? { person_id: resolvedPersonId } : {}),
     })
     .eq("id", profileId);
 
@@ -262,4 +295,108 @@ async function getLatestJoinRequestByRequesterUserId(
   }
 
   return joinRequest;
+}
+
+async function resolvePersonIdForApproval({
+  supabase,
+  requesterUserId,
+  applicantName,
+  applicantPhone,
+  payload,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  requesterUserId: string;
+  applicantName: string;
+  applicantPhone: string;
+  payload: JoinRequest["payload"];
+}) {
+  if (payload?.person_id) {
+    return payload.person_id;
+  }
+
+  const name = applicantName.trim();
+  if (!name) {
+    console.error("[approval] person auto-link skipped: missing applicant name", {
+      requesterUserId,
+    });
+    return null;
+  }
+
+  let query = supabase
+    .from("persons")
+    .select("id, full_name, phone, branch_code, family_role_type")
+    .eq("full_name", name);
+
+  if (payload?.branch_code) {
+    query = query.eq("branch_code", payload.branch_code);
+  }
+
+  if (payload?.family_role_type) {
+    query = query.eq("family_role_type", payload.family_role_type);
+  }
+
+  const { data: candidates, error } = await query.returns<
+    Array<Pick<Person, "id" | "full_name" | "phone" | "branch_code" | "family_role_type">>
+  >();
+
+  if (error) {
+    console.error("[approval] person auto-link lookup failed", {
+      requesterUserId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
+  }
+
+  if (!candidates || candidates.length === 0) {
+    console.error("[approval] person auto-link no match", {
+      requesterUserId,
+      applicantName: name,
+      applicantPhone,
+      branchCode: payload?.branch_code ?? null,
+      familyRoleType: payload?.family_role_type ?? null,
+    });
+    return null;
+  }
+
+  const normalizedApplicantPhone = normalizePhoneNumber(applicantPhone);
+
+  if (normalizedApplicantPhone) {
+    const phoneMatches = candidates.filter((candidate) => {
+      if (!candidate.phone) {
+        return false;
+      }
+
+      return normalizePhoneNumber(candidate.phone) === normalizedApplicantPhone;
+    });
+
+    if (phoneMatches.length === 1) {
+      return phoneMatches[0].id;
+    }
+
+    if (phoneMatches.length > 1) {
+      console.error("[approval] person auto-link ambiguous phone matches", {
+        requesterUserId,
+        applicantName: name,
+        normalizedApplicantPhone,
+        candidateIds: phoneMatches.map((candidate) => candidate.id),
+      });
+      return null;
+    }
+  }
+
+  if (candidates.length === 1) {
+    return candidates[0].id;
+  }
+
+  console.error("[approval] person auto-link ambiguous name matches", {
+    requesterUserId,
+    applicantName: name,
+    branchCode: payload?.branch_code ?? null,
+    familyRoleType: payload?.family_role_type ?? null,
+    candidateIds: candidates.map((candidate) => candidate.id),
+  });
+  return null;
 }
