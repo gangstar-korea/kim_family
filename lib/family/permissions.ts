@@ -15,6 +15,10 @@ export function isBranchRepresentative(profile: UserProfile | null | undefined) 
   return profile?.role === "branch_admin" && Boolean(profile.person_id);
 }
 
+export function isBranchAdmin(profile: UserProfile | null | undefined) {
+  return profile?.role === "branch_admin";
+}
+
 export function isMember(profile: UserProfile | null | undefined) {
   return profile?.role === "member";
 }
@@ -150,6 +154,10 @@ export function canAddChild(
     return false;
   }
 
+  if (isBranchAdmin(profile)) {
+    return true;
+  }
+
   if (isBranchRepresentative(profile)) {
     return getBranchRepresentativeEditableScope(profile, persons, relationships).has(
       targetPerson.id,
@@ -175,6 +183,10 @@ export function canAddSpouse(
 
   if (isMember(profile)) {
     return false;
+  }
+
+  if (isBranchAdmin(profile)) {
+    return true;
   }
 
   if (isBranchRepresentative(profile)) {
