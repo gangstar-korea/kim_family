@@ -18,6 +18,12 @@ function getText(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export async function signOutAction() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
+
 function isBranchCode(value: string): value is BranchCode {
   return BRANCH_OPTIONS.some((option) => option.value === value);
 }
