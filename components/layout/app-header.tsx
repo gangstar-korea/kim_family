@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CheckCheck, UsersRound } from "lucide-react";
+import { CheckCheck, LogOut, UsersRound } from "lucide-react";
 
+import { signOutAction } from "@/lib/auth/auth-actions";
 import { SITE_NAME } from "@/lib/constants";
 
 type AppHeaderProps = {
@@ -26,22 +27,35 @@ export function AppHeader({ title = SITE_NAME }: AppHeaderProps) {
           </h1>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="주요 메뉴">
-          {desktopLinks.map((item) => {
-            const Icon = item.icon;
+        <div className="flex items-center gap-2">
+          <nav className="hidden items-center gap-1 md:flex" aria-label="주요 메뉴">
+            {desktopLinks.map((item) => {
+              const Icon = item.icon;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Icon className="h-4 w-4" aria-hidden />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border/80 bg-card px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <LogOut className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">로그아웃</span>
+              <span className="sm:hidden">종료</span>
+            </button>
+          </form>
+        </div>
       </div>
     </header>
   );
